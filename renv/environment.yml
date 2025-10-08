@@ -1,0 +1,29 @@
+name: wass2s_hydro
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - jupyterlab=4
+  - nodejs
+  - r-base=4.3
+  - r-irkernel
+  - r-tidyverse
+  - r-terra
+  - r-tidyverse
+  - r-ecmwfr
+  - r-sf
+  - r-stars
+  - r-arrow
+  - r-data.table
+  - r-ranger
+  - r-rules
+  - r-stringr
+  - r-tibble
+  - r-tidyr
+  - r-glue
+  - r-tidymodels
+  - r-devtools
+  - r-languageserver
+  - jupyterlab-git
+  - jupyterlab-lsp
+  - jupyterlab_execute_time

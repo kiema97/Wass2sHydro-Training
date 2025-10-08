@@ -1,0 +1,10 @@
+name: wass2s-hydro
+channels:
+  - conda-forge
+dependencies:
+  - jupyterlab=4
+  - nodejs
+  - r-base=4.3
+  - r-irkernel
+  - r-renv
+  - r-devtools
