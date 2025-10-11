@@ -199,3 +199,19 @@ for (j in flows) {
 
 cat(paste0("The value is : ", j," Then is flooding"))
 print(paste0("The value is : ", j," Then is flooding"))
+
+
+## Statistic
+max(flows) # maximum
+min(flows) # minimum
+mean(flows) # average
+sd(flows)  # Standard Deviation
+median(flows) # Median
+quantile(flows) # Quantiles
+?quantile
+quantile(flows,probs = seq(0,1,0.01)) # Quantiles
+
+seq(0,144,7)
+?seq
+
+
