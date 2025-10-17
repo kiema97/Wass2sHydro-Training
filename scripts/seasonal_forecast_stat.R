@@ -20,6 +20,7 @@ PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
 PREDICTOR_VARS <-"SST"
 PATH_OUTPUT <- "outputs"
+FINAL_FUSER <- "rf"
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 fyear <- 2025
 
@@ -57,10 +58,10 @@ stats_results <- map2(data_by_products, names(data_by_products), function(.x,.y)
   frcst <- WASS2SHydroR::wass2s_run_basins_stat(data_by_product = .x,
                                                 hybas_id ="HYBAS_ID",
                                                 pred_pattern_by_product  = pred_pattern_by_product,
-                                                final_fuser = "rf",
+                                                final_fuser = FINAL_FUSER,
                                                 grid_levels = 10,
                                                 min_kge_model =0,
-                                                prediction_years =c(2025,2025),
+                                                prediction_years =c(fyear,fyear),
                                                 init_frac = 0.8,
                                                 assess_frac = 0.1,
                                                 cumulative = TRUE)
@@ -70,7 +71,7 @@ stats_results <- map2(data_by_products, names(data_by_products), function(.x,.y)
 
 {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  file_path <- file.path(PATH_OUTPUT,paste0(PREDICTOR_VARS,"_seasonal_forecast_stat_",timestamp,".rds"))
+  file_path <- file.path(PATH_OUTPUT,paste0(PREDICTOR_VARS,"_seasonal_forecast_stat_", FINAL_FUSER, "_",timestamp,".rds"))
   saveRDS(object =stats_results ,file = file_path )
   message("File saved: ", file_path)
 }
@@ -149,7 +150,7 @@ print(proba_plot)
 
 {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  filename <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_probas_", timestamp, ".png")
+  filename <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_probas_", FINAL_FUSER, "_", timestamp, ".png")
   ggsave(filename = filename,
          plot = proba_plot,
          path = PATH_OUTPUT,
@@ -189,7 +190,7 @@ print(class_plot)
 ## Sauvegarder le graphique
 {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  filename <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_class_", timestamp, ".png")
+  filename <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_class_", FINAL_FUSER, "_", timestamp, ".png")
   ggsave(filename = filename,
          plot = class_plot,
          path = PATH_OUTPUT,
