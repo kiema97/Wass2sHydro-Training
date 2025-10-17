@@ -7,14 +7,16 @@ rm(list = ls())
 
 
 # ==== PARAMETERS (participants only edit this block) ==========================
-COUNTRY_CODE <- "MLI" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
-PREDICTOR_VARS <-"PRCP" # "PRCP", "SST"  # choose among available folders under predictors/
+COUNTRY_CODE <- "NER" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+PREDICTOR_VARS <-"SST" # "PRCP", "SST"  # choose among available folders under predictors/
 SELECTED_MODELS <- NULL  # e.g., c("CanCM3","CCSM4") or NULL to use all available
 # Where things live (relative to project root)
-PATH_COUNTRIES   <- "D:/CCR_AOS/WASS2SHydroRTraining/static/was_contries.shp"   # shapefile with GMI_CNTRY field
-PATH_SUBBASINS   <- "D:/CCR_AOS/WASS2SHydroRTraining/static/subbassins.shp"     # shapefile with HYBAS_ID field
-PATH_HISTORICAL  <- "D:/CCR_AOS/Wass2sHydro-Training/data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
-PATH_PREDICTORS  <- "D:/CCR_AOS/Wass2sHydro-Training_base/predictors/PRCP/Jun-Sep/PRCP"             # expect subfolders: PRCP/, SST/
+PATH_COUNTRIES   <- "static/was_contries.shp"  # shapefile with GMI_CNTRY field
+PATH_SUBBASINS   <- "static/subbassins.shp"     # shapefile with HYBAS_ID field
+PATH_HISTORICAL  <- "data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
+PATH_PREDICTORS  <- "D:/CCR_AOS/Wass2sHydro-Training_base/predictors/SST/Jun-Sep/data"             # expect subfolders: PRCP/, SST/
+PATH_OUTPUT <- "outputs"
+
 # Optional: performance/speed knobs
 N_CORES <- 4#max(1, parallel::detectCores() - 1)
 
@@ -47,7 +49,7 @@ pred_catalog <- catalog_predictors(base_dir = PATH_PREDICTORS,
 unique(pred_catalog$model)
 
 # Filter by trainee choices
-SELECTED_MODELS <- c("CCSM4","CESM1","CanSIPSIC4","METEOFRANCE9","SEAS51")
+SELECTED_MODELS <- c("CCSM4","CESM1","CanSIPSIC4","METEOFRANCE9","SEAS51","SPSv3p5","SEAS51c")
 pred_catalog <- pred_catalog %>% filter(var %in% PREDICTOR_VARS)
 if (!is.null(SELECTED_MODELS)) {
   pred_catalog <- pred_catalog %>% filter(model %in% SELECTED_MODELS)
@@ -76,8 +78,9 @@ if (!is.null(first_key)) {
 
 
 ## 6) Save the prepared list for modeling
-dir.create("outputs", showWarnings = FALSE)
-saveRDS(training_list_clean, file = file.path("outputs", paste0("training_list_", COUNTRY_CODE, ".rds")))
-message("Saved: ", file.path("outputs", paste0("training_list_", COUNTRY_CODE, ".rds")))
+dir.create(PATH_OUTPUT, showWarnings = FALSE)
+savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_training_list_", COUNTRY_CODE, ".rds"))
+saveRDS(training_list_clean, file =savePath )
+message("Saved: ",savePath)
 
 
