@@ -55,7 +55,7 @@ safeload <- function(pkgs, update_github = FALSE) {
       "kiema97/AGRHYMET-WASS2SHydroR",
       build_vignettes = FALSE,
       upgrade = "never",
-      auth_token = Sys.getenv("GITHUB_PAT", unset = NA),
+      auth_token = NULL,
       dependencies = TRUE,
       quiet = TRUE
     )
