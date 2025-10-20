@@ -3,68 +3,45 @@
 # Clean, documented, and beginner-friendly script
 ################################################################################
 # ---- Dependencies ----------------------------------------------------------
-safeload <- function(pkgs) {
-  miss <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
-  if (length(miss)) stop("Missing packages: ", paste(miss, collapse = ", "), call. = FALSE)
-}
-safeload(c("WASS2SHydroR", "sf", "dplyr", "purrr", "ggplot2", "ggspatial", "readr", "stringr", "tibble"))
-
-
+rm(list = ls())
 # ==== PARAMETERS (participants only edit this block) ==========================
-PATH_INPUTS <- "outputs/training_list_CIV.rds"
+PATH_INPUTS <- "outputs/SST_training_list_BFA.rds"
 data_by_products <- readRDS(PATH_INPUTS)
-COUNTRY_CODE <- "CIV" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
-PATH_COUNTRIES   <- "D:/CCR_AOS/WASS2SHydroRTraining/static/was_contries.shp"   # shapefile with GMI_CNTRY field
-PATH_SUBBASINS   <- "D:/CCR_AOS/WASS2SHydroRTraining/static/subbassins.shp"
+COUNTRY_CODE <- "BFA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
+PATH_SUBBASINS   <- "static/subbassins.shp"
+PREDICTOR_VARS <-"SST"
 PATH_OUTPUT <- "outputs"
+FINAL_FUSER <- "xgb"
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 fyear <- 2025
-
-#------------------- 1) Clip subbasins by country polygon-----------------------------------
-
-# Read shapefiles
-a_countries <- sf::st_read(PATH_COUNTRIES, quiet = TRUE) %>%
-  sf::st_make_valid()
-a_subs      <- sf::st_read(PATH_SUBBASINS, quiet = TRUE) %>%
-  sf::st_make_valid()
-
-# Ensure same CRS
-if (sf::st_crs(a_countries) != sf::st_crs(a_subs)) {
-  a_subs <- sf::st_transform(a_subs, sf::st_crs(a_countries))
-}
-
-# Filter country
-country <- a_countries %>% filter(.data$GMI_CNTRY == COUNTRY_CODE)
-if (nrow(country) == 0) stop("No country with GMI_CNTRY == ", COUNTRY_CODE)
-
-# Intersections: subbasins partially or fully covered by the country polygon
-inter_idx <- sf::st_intersects(a_subs, country, sparse = TRUE)
-sel <- lengths(inter_idx) > 0
-subs_sel <- a_subs[sel, ]
-
-sf_basins <- sf::st_intersection(a_subs, country)%>%
-  mutate(HYBAS_ID = as.factor(HYBAS_ID))
-
-
-#-------- 2) Run statistical forecasts for each product group------------------------------
-message("Running statistical forecasts (per product) ...")
+source("scripts/load_required_packages_frcst.R")
+#-------- 2) Run ML forecasts for each product group------------------------------
+message("Running ML forecasts (per product) ...")
 
 ml_results <- map(data_by_products, function(.x){
-  pred_pattern_by_product <- as.vector(rep("^prcp_",length(.x)))
+  pred_pattern_by_product <- as.vector(rep("^sst_",length(.x)))
   names(pred_pattern_by_product) <- names(.x)
   wass2s_run_basins_ml(data_by_product = .x,
                        hybas_id = "HYBAS_ID",
                        pred_pattern_by_product =pred_pattern_by_product,
-                       models = c("mlp","rf","xgb","mars") ,
+                       models = c("mlp","mars","rf") ,
                        topK = 3,
-                       min_kge_model =-1 ,
-                       grid_levels = 10,
-                       final_fuser = "kknn")
+                       min_kge_model =0 ,
+                       grid_levels = 5,
+                       prediction_years =fyear,
+                       verbose_tune = FALSE,,
+                       final_fuser = FINAL_FUSER)
 })
 
 
+{
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  file_path <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_ml_", FINAL_FUSER, "_",timestamp,".rds"))
+  saveRDS(object =ml_results ,file = file_path )
+  message("File saved: ", file_path)
+}
 
-saveRDS(object =ml_results ,file = file.path(PATH_OUTPUT,"seasonal_forecast_stat.rds"))
 #----------------- 3) Extract fused predictions per basin into a single tall tibble--------------------
 message("Extracting fused predictions ...")
 ml_results2 <- map(names(ml_results), function(id) {
@@ -116,7 +93,7 @@ proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
 
 print(proba_plot)
 
-proba_plot <- proba_plot + annotation_north_arrow(
+proba_plot <- proba_plot + ggspatial::annotation_north_arrow(
   location = "tr",
   which_north = "true",
   style = north_arrow_fancy_orienteering,
@@ -124,7 +101,7 @@ proba_plot <- proba_plot + annotation_north_arrow(
   width = unit(1.2, "cm"),
   pad_x = unit(-0.1, "cm"),
   pad_y = unit(0.1, "cm")
-)+ annotation_scale(
+)+ ggspatial::annotation_scale(
   location = "br",
   width_hint = 0.3
 )+
@@ -136,21 +113,26 @@ proba_plot <- proba_plot + annotation_north_arrow(
 
 print(proba_plot)
 ## Sauvegarder le graphique
-ggsave(filename = paste0(COUNTRY_CODE,"_",fyear,"_ml_probas.png"),
-       plot = proba_plot,
-       path = PATH_OUTPUT,
-       width = 9.5,
-       height = 6.5, dpi = 600,
-       bg = "white")
 
+{
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  filename <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_ml_probas_", FINAL_FUSER, "_", timestamp, ".png")
+  ggsave(filename = filename,
+         plot = proba_plot,
+         path = PATH_OUTPUT,
+         width = 9.5,
+         height = 6.5,
+         dpi = 600,
+         bg = "white")
+  message("Probabilities Map saved: ", filename)
+}
 
 # ---- 6) Class map (above/normal/below) ---------------------------------------
 message("Building class map ...")
 class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
-                                            type = "class",
-                                            colors =palette_colors )
+                                            type = "class" )
 print(class_plot)
 
 class_plot <- class_plot +
@@ -171,11 +153,18 @@ class_plot <- class_plot +
 print(class_plot)
 
 ## Sauvegarder le graphique
-ggsave(filename = paste0(COUNTRY_CODE,"_",fyear,"_ml_class.png"),
-       plot = class_plot,
-       path = PATH_OUTPUT,
-       width = 9.5,
-       height = 6.5,
-       dpi = 600,
-       bg = "white")
+
+{
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  filename <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_ml_class_", FINAL_FUSER, "_", timestamp, ".png")
+  ggsave(filename = filename,
+         plot = class_plot,
+         path = PATH_OUTPUT,
+         width = 9.5,
+         height = 6.5,
+         dpi = 600,
+         bg = "white")
+  message("Probabilities Map saved: ", filename)
+}
+
 message("Done. Outputs saved to: ", normalizePath(PATH_OUTPUT, winslash = "/"))

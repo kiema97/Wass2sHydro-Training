@@ -4,6 +4,13 @@ Sys.unsetenv("RENV_PATHS_ROOT")
 .libPaths('C:/Users/ARSENE/.local/share/mamba/envs/wass2s-hydro-3/Lib/R/library')
 # Set CRAN mirror
 options(repos = c(CRAN = "https://cloud.r-project.org"))
+force_reinstall <- TRUE
+
+install.packages(c("languageserver", "IRkernel"))
+
+# (Optional but recommended) make this env available as an R notebook kernel
+IRkernel::installspec(name = "ir-wass2s-hydro-3", displayname = "R (wass2s-hydro-3)")
+
 
 # Function to check if package is installed
 is_package_installed <- function(pkg) {
@@ -41,7 +48,8 @@ packages <- c(
   "tidyselect",
   "hydrostats",
   "zoo",
-  "xts"
+  "xts",
+  "remotes"
 )
 
 # Filter out already installed packages
@@ -81,9 +89,9 @@ for(pkg in critical_pkgs) {
     message("✗ ", pkg, " failed to install")
   }
 }
-
+remove.packages("WASS2SHydroR")
 # Install GitHub package only if not already installed
-if (!is_package_installed("AGRHYMETWASS2SHydroR")) {
+if (!is_package_installed("WASS2SHydroR") | force_reinstall) {
   message("Installing AGRHYMET-WASS2SHydroR from GitHub...")
   tryCatch({
     devtools::install_github(
@@ -92,12 +100,12 @@ if (!is_package_installed("AGRHYMETWASS2SHydroR")) {
       upgrade = "never",
       auth_token = NULL
     )
-    message("✓ AGRHYMET-WASS2SHydroR installed successfully")
+    message("✓ WASS2SHydroR installed successfully")
   }, error = function(e) {
-    message("✗ Failed to install AGRHYMET-WASS2SHydroR: ", e$message)
+    message("✗ Failed to install WASS2SHydroR: ", e$message)
   })
 } else {
-  message("✓ AGRHYMET-WASS2SHydroR is already installed")
+  message("✓ WASS2SHydroR is already installed")
 }
 
 # Final verification
