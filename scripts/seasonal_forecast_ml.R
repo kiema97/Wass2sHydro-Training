@@ -12,6 +12,7 @@ PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
 PREDICTOR_VARS <-"SST"
 PATH_OUTPUT <- "outputs"
+MODELS <- c("mlp","mars","rf")
 FINAL_FUSER <- "xgb"
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 fyear <- 2025
@@ -22,16 +23,17 @@ message("Running ML forecasts (per product) ...")
 ml_results <- map(data_by_products, function(.x){
   pred_pattern_by_product <- as.vector(rep("^sst_",length(.x)))
   names(pred_pattern_by_product) <- names(.x)
+  pred_pattern_by_product <- paste0("^", tolower(PREDICTOR_VARS),"_")
   wass2s_run_basins_ml(data_by_product = .x,
                        hybas_id = "HYBAS_ID",
                        pred_pattern_by_product =pred_pattern_by_product,
-                       models = c("mlp","mars","rf") ,
+                       models = tolower(MODELS) ,
                        topK = 3,
                        min_kge_model =0 ,
                        grid_levels = 5,
-                       prediction_years =fyear,
+                       prediction_years =c(fyear,fyear),
                        verbose_tune = FALSE,,
-                       final_fuser = FINAL_FUSER)
+                       final_fuser = tolower(FINAL_FUSER))
 })
 
 
