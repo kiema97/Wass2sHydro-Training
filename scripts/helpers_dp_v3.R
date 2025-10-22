@@ -277,7 +277,7 @@ extract_predictors_nested <- function(hybas_ids,
                                     Q = NA_integer_)
         }
 
-        hid_hist_df %>% right_join(predictors_data %>% mutate(HYBAS_ID = as.factor(HYBAS_ID)), by = c("DATE","HYBAS_ID")) %>%
+        hid_hist_df %>% inner_join(predictors_data %>% mutate(HYBAS_ID = as.factor(HYBAS_ID)), by = c("DATE","HYBAS_ID")) %>%
         rename(YYYY = DATE) %>%
         dplyr::select(HYBAS_ID,YYYY,Q, everything())
 
