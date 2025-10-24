@@ -5,18 +5,19 @@
 # ---- Dependencies ----------------------------------------------------------
 rm(list = ls())
 # ==== PARAMETERS (participants only edit this block) ==========================
-PATH_INPUTS <- "outputs/SST_training_list_BFA.rds"
+PATH_INPUTS <- "D:/CCR_AOS/Wass2sHydro-Training_base/outputs/PRCP_training_list_CIV_obs.rds"
 data_by_products <- readRDS(PATH_INPUTS)
-COUNTRY_CODE <- "BFA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+COUNTRY_CODE <- "CIV" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
-PREDICTOR_VARS <-"SST"
+PREDICTOR_VARS <-"PRCP"
 PATH_OUTPUT <- "outputs"
 MODELS <- c("mlp","mars","rf")
 FINAL_FUSER <- "xgb"
+update_github <- TRUE
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 fyear <- 2025
-source("scripts/load_required_packages_frcst.R")
+source("scripts/load_required_packages_frcst_v3.R")
 #-------- 2) Run ML forecasts for each product group------------------------------
 message("Running ML forecasts (per product) ...")
 
@@ -33,14 +34,29 @@ ml_results <- map(data_by_products, function(.x){
                        grid_levels = 5,
                        prediction_years =c(fyear,fyear),
                        verbose_tune = FALSE,,
-                       final_fuser = tolower(FINAL_FUSER))
+                       final_fuser = tolower(FINAL_FUSER),parallel = FALSE,workers = 4)
 })
+
+# fused_all <- map_dfr(names(ml_results), \(id) {
+#   x <- ml_results[[id]]
+#   if (!is.null(x[[1]]$fused_by_model)) {
+#     x[[1]]$fused_by_model %>%
+#       mutate(HYBAS_ID = id, .before = 1)
+#   }
+# })
+
+fused_all <- imap(ml_results, ~ purrr::pluck(.x, 1, "fused_by_model", .default = NULL)) %>%
+  discard(is.null) %>%
+  imap_dfr(~ mutate(.x, HYBAS_ID = .y, .before = 1))
 
 
 {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
   file_path <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_ml_", FINAL_FUSER, "_",timestamp,".rds"))
+  file_path2 <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_fused_ml_results_", FINAL_FUSER, "_",timestamp,".csv"))
+
   saveRDS(object =ml_results ,file = file_path )
+  write.csv(fused_all, file_path2, row.names = FALSE)
   message("File saved: ", file_path)
 }
 
