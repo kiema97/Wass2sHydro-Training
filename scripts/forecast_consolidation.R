@@ -12,6 +12,7 @@ PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
 PREDICTOR_VARS <-"PRCP"
 PATH_OUTPUT <- "outputs"
+SHP_OUTPUT <- "SHP"
 FINAL_FUSER <- "rf"
 update_github <- TRUE
 fyear <- 2025
@@ -25,8 +26,23 @@ yprobas <- probabilities %>%
 
 # ---- 5) Probability map -------------------------------------------------------
 message("Building probability map ...")
+contry_plot <-  geom_sf(data = country, fill = NA,
+                        color = "red", size = 0.4)
 proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
-                                            data = yprobas,basin_col = "HYBAS_ID" )
+                                            data = yprobas,basin_col = "HYBAS_ID" )+
+  contry_plot
+
+sf_probas <- sf_basins %>%
+  dplyr::select(HYBAS_ID,NEXT_DOWN,GMI_CNTRY) %>%
+  dplyr::inner_join(yprobas, by = "HYBAS_ID")
+
+{
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  file_path <- file.path(PATH_OUTPUT,SHP_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_sf_forecast_", FINAL_FUSER, "_",timestamp,".shp"))
+  sf::write_sf(sf_probas,file_path)
+  message("probablity shapefile saved into : ", file_path)
+}
+
 
 
 print(proba_plot)
@@ -70,7 +86,11 @@ message("Building class map ...")
 class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
-                                            type = "class" )
+                                            type = "class" )+
+  contry_plot+
+  geom_sf_text(data =sf_basins,
+               aes(label = HYBAS_ID), size = 2.5,
+               color = "#000000" )
 print(class_plot)
 
 class_plot <- class_plot +

@@ -1,5 +1,7 @@
 #------------------- 1) Clip subbasins by country polygon-----------------------------------
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
+dir.create(file.path(PATH_OUTPUT,SHP_OUTPUT),showWarnings = FALSE,recursive = TRUE)
+
 # Read shapefiles
 a_countries <- sf::st_read(PATH_COUNTRIES, quiet = TRUE) %>%
   sf::st_make_valid()
