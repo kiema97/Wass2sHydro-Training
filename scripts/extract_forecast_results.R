@@ -56,7 +56,7 @@ performance_by_product <- map(names(frcst_results), function(.x) {
   pdf <- map(names(ml_result$leaderboards), function(.y) {
     leaderboard <- ml_result$leaderboards[[.y]] %>%
       mutate(ML_MODEL = .y) %>%
-      dplyr::select(-weight)
+      dplyr::select(-any_of(c("weight")))
   }) %>% bind_rows()
 
   pdf %>% mutate(HYBAS_ID = .x)
@@ -65,7 +65,6 @@ performance_by_product <- map(names(frcst_results), function(.x) {
   arrange(HYBAS_ID, ML_MODEL)
 
 message(glue::glue("Extracted leaderboard data for {n_distinct(performance_by_product$HYBAS_ID)} basins."))
-
 
 
 # ---- Define Timestamp for Output Filenames ----
