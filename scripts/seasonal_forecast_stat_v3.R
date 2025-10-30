@@ -39,10 +39,17 @@ stats_results <- map2(data_by_products, names(data_by_products), function(.x,.y)
   return(frcst)
 })
 
+fused_all <- imap(stats_results, ~ purrr::pluck(.x, 1, "fused_by_model", .default = NULL)) %>%
+  discard(is.null) %>%
+  imap_dfr(~ mutate(.x, HYBAS_ID = .y, .before = 1))
+
 {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
   file_path <- file.path(PATH_OUTPUT,paste0(PREDICTOR_VARS,"_seasonal_forecast_stat_", FINAL_FUSER, "_",timestamp,".rds"))
   saveRDS(object =stats_results ,file = file_path )
+
+  file_path2 <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_fused_stat_results_", FINAL_FUSER, "_",timestamp,".csv"))
+  write.csv(fused_all, file_path2, row.names = FALSE)
   message("File saved: ", file_path)
 }
 
@@ -84,6 +91,15 @@ probabilities <- map(hybas_ids,~{
   return(proba)
 }) %>% bind_rows()
 
+
+{
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  file_path_proba <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_statistic_seasonal_forecast_probabilities_", FINAL_FUSER, "_",timestamp,".csv"))
+  write.table(x = probabilities,file =file_path_proba ,append =FALSE ,quote = FALSE,sep ="," ,row.names = FALSE)
+
+
+  message("Forecast probabilities saved into : ", file_path_proba)
+}
 
 yprobas <- probabilities %>%
   dplyr::filter(YYYY == fyear) %>%

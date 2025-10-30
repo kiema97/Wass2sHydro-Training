@@ -3,8 +3,10 @@ stopifnot(length(COUNTRY_CODE) == 1, nchar(COUNTRY_CODE) == 3)
 # Read shapefiles
 a_countries <- sf::st_read(PATH_COUNTRIES, quiet = TRUE) %>%
   sf::st_make_valid()
-a_subs      <- sf::st_read(PATH_SUBBASINS, quiet = TRUE) %>%
+
+a_subs <- sf::st_read(PATH_SUBBASINS, quiet = TRUE) %>%
   sf::st_make_valid() %>%
+  rename(HYBAS_ID = dplyr::all_of(SUBBASINS_ID_COL)) %>%
   mutate(HYBAS_ID = as.factor(HYBAS_ID))
 
 # Ensure same CRS

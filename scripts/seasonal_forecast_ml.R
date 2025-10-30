@@ -98,7 +98,14 @@ probabilities <- map(hybas_ids,~{
   return(proba)
 }) %>% bind_rows()
 
+{
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  file_path_proba <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_MachineLearning_seasonal_forecast_probabilities_", FINAL_FUSER, "_",timestamp,".csv"))
+  write.table(x = probabilities,file =file_path_proba ,append =FALSE ,quote = FALSE,sep ="," ,row.names = FALSE)
 
+
+  message("Forecast probabilities saved into : ", file_path_proba)
+}
 yprobas <- probabilities %>%
   dplyr::filter(YYYY == fyear) %>%
   mutate(HYBAS_ID = as.factor(HYBAS_ID))

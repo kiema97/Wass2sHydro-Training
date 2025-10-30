@@ -27,7 +27,7 @@ required_pkgs <- c(
   "ggspatial","readr","stringr","tibble"
 )
 
-safeload <- function(pkgs, update_github = FALSE) {
+safeload <- function(pkgs, update_github = FALSE,force_reinstallation=FALSE) {
   # Helper: check if a namespace is available without attaching it
   is_installed <- function(x) {
     requireNamespace(x, quietly = TRUE)
@@ -64,7 +64,8 @@ safeload <- function(pkgs, update_github = FALSE) {
       upgrade = "never",
       auth_token = NULL,
       dependencies = TRUE,
-      quiet = TRUE
+      quiet = TRUE,
+      force = force_reinstallation
     )
   }
 
@@ -88,7 +89,7 @@ safeload <- function(pkgs, update_github = FALSE) {
 }
 
 # Execute once to ensure your working session has everything loaded
-safeload(required_pkgs,update_github = update_github)
+safeload(required_pkgs,update_github = update_github,force_reinstallation = force_reinstallation)
 
 
 # suppressPackageStartupMessages({

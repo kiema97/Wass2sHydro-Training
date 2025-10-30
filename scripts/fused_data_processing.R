@@ -96,12 +96,26 @@ consolidated_frcsts <- map(unique(fused_data$HYBAS_ID),function(.x){
 }) %>% bind_rows()
 
 
-
+performances_metrics <- consolidated_frcsts %>%
+  group_by(HYBAS_ID) %>%
+  summarise(KGE = wass2s_kge(Q,pred),
+            RMSE = wass2s_rmse(Q,pred),
+            NSE = wass2s_nse(Q,pred),
+            MAE = wass2s_mae(Q,pred),
+            CORR =  wass2s_corr(Q,pred))
 {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  file_path <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_consolidated_", FINAL_FUSER, "_",timestamp,".rds"))
-  saveRDS(object =consolidated_frcsts ,file = file_path )
-  message("Consolidated forecast saved into : ", file_path)
+  file_path_consolidated_frcsts <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_consolidated_", FINAL_FUSER, "_",timestamp,".csv"))
+  file_path_performance <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_performances_", FINAL_FUSER, "_",timestamp,".csv"))
+
+  write.table(x = performances_metrics,
+              file =file_path_performance ,append =FALSE ,quote = FALSE,sep ="," ,row.names = FALSE)
+  write.table(x = consolidated_frcsts,
+              file = file_path_consolidated_frcsts,append =FALSE ,quote = FALSE,sep ="," ,row.names = FALSE)
+
+  #saveRDS(object =consolidated_frcsts ,file = file_path )
+  message("Consolidated forecast saved into : ", file_path_consolidated_frcsts)
+  message("Forecast performances saved into : ", file_path_performance)
 }
 
 
@@ -122,3 +136,11 @@ probabilities <- map(hybas_ids,~{
   return(proba)
 }) %>% bind_rows()
 
+{
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  file_path_proba <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_consolidated_probabilities_", FINAL_FUSER, "_",timestamp,".csv"))
+  write.table(x = probabilities,file =file_path_proba ,append =FALSE ,quote = FALSE,sep ="," ,row.names = FALSE)
+
+
+  message("Consolidated forecast probabilities saved into : ", file_path_proba)
+}

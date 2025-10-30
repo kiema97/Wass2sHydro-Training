@@ -10,7 +10,7 @@ PATH_STAT_INPUTS <- "outputs/BFA_SST_seasonal_forecast_ml_xgb_20251023_011940.rd
 COUNTRY_CODE <- "CIV" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
-PREDICTOR_VARS <-"PRCP"
+PREDICTOR_VARS <-"SST"
 PATH_OUTPUT <- "outputs"
 SHP_OUTPUT <- "SHP"
 FINAL_FUSER <- "rf"
@@ -33,7 +33,7 @@ proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
   contry_plot
 
 sf_probas <- sf_basins %>%
-  dplyr::select(HYBAS_ID,NEXT_DOWN,GMI_CNTRY) %>%
+  #dplyr::select(HYBAS_ID,NEXT_DOWN,GMI_CNTRY) %>%
   dplyr::inner_join(yprobas, by = "HYBAS_ID")
 
 {
