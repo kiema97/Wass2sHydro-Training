@@ -15,7 +15,12 @@ if (!requireNamespace("IRkernel", quietly = TRUE)) install.packages("IRkernel")
 
 # 4) Installer WASS2SHydroR depuis GitHub (pense à taguer une version stable)
 if (!requireNamespace("WASS2SHydroR", quietly = TRUE)) {
-  devtools::install_github("kiema97/AGRHYMET-WASS2SHydroR@v0.1.0")
+  devtools::install_github(
+    "kiema97/AGRHYMET-WASS2SHydroR",
+    build_vignettes = FALSE,
+    upgrade = "never",
+    auth_token = NULL
+  )
 }
 
 # 5) Enregistrer un kernel Jupyter spécifique à la formation

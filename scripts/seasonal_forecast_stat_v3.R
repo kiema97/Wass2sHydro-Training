@@ -3,7 +3,7 @@
 # Clean, documented, and beginner-friendly script
 ################################################################################
 # ==== PARAMETERS (participants only edit this block) ==========================
-PATH_INPUTS <- "outputs/SST_training_list_GHA.rds"
+PATH_INPUTS <- "outputs/SST_training_list_BFA.rds"
 data_by_products <- readRDS(PATH_INPUTS)
 COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field

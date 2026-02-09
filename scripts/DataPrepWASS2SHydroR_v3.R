@@ -5,22 +5,26 @@
 ## Netoyage
 rm(list = ls())
 # ==== PARAMETERS (participants only edit this block) ==========================
-COUNTRY_CODE <- "CIV" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
-PREDICTOR_VARS <-"SST" # "PRCP", "SST"  # choose among available folders under predictors/
+COUNTRY_CODE <- "GMB" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+PREDICTOR_VARS <-"PRCP" # "PRCP", "SST"  # choose among available folders under predictors/
 SELECTED_MODELS <- NULL  # e.g., c("CanCM3","CCSM4") or NULL to use all available
 # Where things live (relative to project root)
-PATH_COUNTRIES   <- "static/was_contries.shp"  # shapefile with GMI_CNTRY field
-PATH_SUBBASINS   <-"D:/CCR_AOS/Wass2sHydro-Training_base/static/subbassins_ci.shp" #"static/subbassins.shp"     # shapefile with HYBAS_ID field
-PATH_HISTORICAL  <-"D:/CCR_AOS/Wass2sHydro-Training_base/data/CIV/was_subbassins_seasonal_data_ci_v2.csv" #"data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
+PATH_COUNTRIES   <- "static/was_contries.shp" # shapefile with GMI_CNTRY field
+PATH_SUBBASINS   <-"static/subbassins.shp" #"static/subbassins.shp"     # shapefile with HYBAS_ID field
+PATH_HISTORICAL  <-"data/was_subbassins_seasonal_data.csv" #"data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
 PATH_PREDICTORS  <- "predictors"             # expect subfolders: PRCP/, SST/
 PATH_OUTPUT <- "outputs"
 update_github <- TRUE
+force_reinstallation <- FALSE
 FIELD_SEPERATOR <- ","
 MISSING_VALUE_CODE <-  "-999"
 HISTORICAL_DATA_ID_COL <- "HYBAS_ID"
+SUBBASINS_ID_COL <- "HYBAS_ID"
 FYEAR <- 2025
 # Optional: performance/speed knobs
 N_CORES <- 4#max(1, parallel::detectCores() - 1)
+
+
 
 
 #=========== Configuration files ===================================================
@@ -74,6 +78,7 @@ if (!is.null(SELECTED_MODELS)) {
 }
 sum(unique(hist_df$HYBAS_ID)%in%unique(subs_sel$HYBAS_ID))
 
+
 training_list <- extract_predictors_nested(hybas_ids = unique(hist_df$HYBAS_ID),
                                            models = SELECTED_MODELS,
                                            hist_df = hist_df,
@@ -85,9 +90,13 @@ training_list <- extract_predictors_nested(hybas_ids = unique(hist_df$HYBAS_ID),
 
 ## 5) Quick sanity checks on the output list
 # Show first subbasin's head
-training_list_clean <- training_list |>
-  map(~ keep(.x, ~ is.data.frame(.x) && NROW(.x) > 0)) |>
-  discard(~ length(.x) == 0)
+training_list_clean <- tryCatch({
+  training_list |>
+    map(~ keep(.x, ~ is.data.frame(.x) && NROW(.x) > 0)) |>
+    discard(~ length(.x) == 0)
+}, error = function(e){
+  training_list
+})
 
 first_key <- names(training_list)[1]
 if (!is.null(first_key)) {
