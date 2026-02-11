@@ -3,51 +3,26 @@
 # Clean, documented, and beginner-friendly script
 ################################################################################
 # ---- Dependencies ----------------------------------------------------------
-rm(list = ls())
+#rm(list = ls())
 # ==== PARAMETERS (participants only edit this block) ==========================
-PATH_INPUTS <-"data/PRCP_SST_WAS_TRAINING_DATA_v2.rds"
+PATH_INPUTS <-"data/PRCP_WAS_TRAINING_DATA_MAM_2026.rds"
 data_by_products <- readRDS(PATH_INPUTS)
-COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
-PREDICTOR_VARS <-"PRCP_SST"
-PATH_OUTPUT <- "outputs_v2"
+PREDICTOR_VARS <-"PRCP"
+PATH_OUTPUT <- "outputs_ghana"
 MODELS <- c("rf","svmlinear","mlp")
 FINAL_FUSER <- "rf"
 update_github <- TRUE
-workers <- 20
+workers <- 10
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
-fyears <- c(2020,2025)
-fyear <- 20240101
-source("scripts/load_required_packages_frcst_v3.R")
+fyears <- c(2020,2026)
+fyear <- 20260101
+source("scripts/news/load_required_packages_frcst.R")
 #-------- 2) Run ML forecasts for each product group------------------------------
 message("Running ML forecasts (per product) ...")
-
-# ml_results <- map(data_by_products_1, function(.x){
-#   pred_pattern_by_product <- as.vector(rep("^sst_",length(.x)))
-#   names(pred_pattern_by_product) <- names(.x)
-#   pred_pattern_by_product <- paste0("^", tolower(PREDICTOR_VARS),"_")
-#   wass2s_run_basins_ml(data_by_product = .x,
-#                        hybas_id = "HYBAS_ID",
-#                        pred_pattern_by_product =pred_pattern_by_product,
-#                        models = tolower(MODELS) ,
-#                        topK = 1,use_sub_fuser = FALSE,
-#                        min_kge_model =-Inf ,
-#                        grid_levels = 2,
-#                        prediction_years =fyears,
-#                        verbose_tune = FALSE,quiet =  FALSE,
-#                        final_fuser = tolower(FINAL_FUSER),parallel = FALSE,workers = 4)
-# })
-
-# fused_all <- map_dfr(names(ml_results), \(id) {
-#   x <- ml_results[[id]]
-#   if (!is.null(x[[1]]$fused_by_model)) {
-#     x[[1]]$fused_by_model %>%
-#       mutate(HYBAS_ID = id, .before = 1)
-#   }
-# })
 pred_pattern_by_product <- "^(prcp|sst)"
-
 with_progress({
   p <- progressor(along = data_by_products)
   ml_results <- future_map(

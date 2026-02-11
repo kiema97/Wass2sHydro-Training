@@ -3,16 +3,14 @@
 ###################################################################################
 
 ## Netoyage
-rm(list = ls())
 # ==== PARAMETERS (participants only edit this block) ==========================
-COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PREDICTOR_VARS <-"PRCP" # "PRCP", "SST"  # choose among available folders under predictors/
-SELECTED_MODELS <- NULL  # e.g., c("CanCM3","CCSM4") or NULL to use all available
 # Where things live (relative to project root)
 PATH_COUNTRIES   <- "static/was_contries.shp" # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <-"static/subbassins.shp" #"static/subbassins.shp"     # shapefile with HYBAS_ID field
-PATH_HISTORICAL  <-"data/seasonnal_ref_discharge_v2.csv" #"data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
-PATH_PREDICTORS  <- "predictors"             # expect subfolders: PRCP/, SST/
+PATH_HISTORICAL  <-"data/seasonnal_dicharge_mam_ghana.csv" #"data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
+PATH_PREDICTORS  <- "predictors"
 PATH_OUTPUT <- "data"
 update_github <- FALSE
 force_reinstallation <- FALSE
@@ -20,16 +18,14 @@ FIELD_SEPERATOR <- ","
 MISSING_VALUE_CODE <-  "-999"
 HISTORICAL_DATA_ID_COL <- "HYBAS_ID"
 SUBBASINS_ID_COL <- "HYBAS_ID"
-FYEAR <- 2025
+FYEAR <- 2026
+start_year <- 1993
+end_year <- 2026
 # Optional: performance/speed knobs
 N_CORES <- 4#max(1, parallel::detectCores() - 1)
-
-
-
-
 #=========== Configuration files ===================================================
-source("scripts/helpers_dp_v3.R")
-source("scripts/processing_v3.R")
+source("scripts/news/helpers_dp.R")
+source("scripts/news/processing.R")
 
 # 1) Select the user's country and find covered subbasins
 ggplot2::ggplot()+
@@ -57,8 +53,8 @@ hist_df <- read_historical_df_yearly(path = PATH_HISTORICAL,
                                      missing_value_code =MISSING_VALUE_CODE,
                                      check_warn =  TRUE,fyear = FYEAR) %>%
   rename(DATE = YYYY) %>%
-  distinct(HYBAS_ID, DATE, .keep_all = TRUE) %>% 
-  dplyr::filter(DATE>=1991)
+  distinct(HYBAS_ID, DATE, .keep_all = TRUE) %>%
+  dplyr::filter(DATE>=start_year,DATE<=end_year)
 
 # Sanity check
 hist_df %>% group_by(HYBAS_ID) %>% summarise(n = n(), .groups = "drop") %>% head(10)
@@ -71,7 +67,7 @@ pred_catalog <- catalog_predictors(base_dir = PATH_PREDICTORS,
 unique(pred_catalog$model)
 
 # Filter by trainee choices
-SELECTED_MODELS <- c("CCSM4","CFSv2","CanSIPSIC4","METEOFRANCE9","SEAS51c")
+SELECTED_MODELS <- unique(pred_catalog$model)
 pred_catalog <- pred_catalog %>% filter(var %in% PREDICTOR_VARS)
 if (!is.null(SELECTED_MODELS)) {
   pred_catalog <- pred_catalog %>% filter(model %in% SELECTED_MODELS)
@@ -85,7 +81,7 @@ training_list <- extract_predictors_nested(hybas_ids = unique(hist_df$HYBAS_ID),
                                            predictor = PREDICTOR_VARS,
                                            predictors_root = PATH_PREDICTORS,
                                            subbasins_sf = subs_sel,
-                                           init_year = 2025)
+                                           init_year = FYEAR)
 
 
 ## 5) Quick sanity checks on the output list
@@ -107,7 +103,7 @@ if (!is.null(first_key)) {
 ## 6) Save the prepared list for modeling
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 #savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_training_list_", if(is.null(COUNTRY_CODE)) "ALL" else COUNTRY_CODE, "_obs.rds"))
-savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_WAS_TRAINING_DATA_v2.rds"))
+savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_WAS_TRAINING_DATA_MAM_2026.rds"))
 
 saveRDS(training_list_clean, file =savePath )
 message("Saved: ",savePath)

@@ -112,7 +112,7 @@ if (sf::st_crs(a_countries) != sf::st_crs(a_subs)) {
 }
 
 # Filter country
-country <- a_countries 
+country <- a_countries
 if(!is.null(COUNTRY_CODE)){
   country <- country %>% filter(.data$GMI_CNTRY == COUNTRY_CODE)
   if (nrow(country) == 0) stop("No country with GMI_CNTRY == ", COUNTRY_CODE)
@@ -125,3 +125,55 @@ subs_sel <- a_subs[sel, ]
 
 sf_basins <- sf::st_intersection(a_subs, country)%>%
   mutate(HYBAS_ID = as.factor(HYBAS_ID))
+
+
+merge_prcp_sst_lists <- function(
+    prcp,
+    sst,
+    id_cols = c("HYBAS_ID", "YYYY","Q"),
+    prcp_prefix = "prcp_",
+    sst_prefix  = "sst_"
+) {
+  # ---- validate basic structure ----
+  if (!is.list(prcp) || !is.list(sst)) {
+    stop("`prcp` and `sst` must be lists.", call. = FALSE)
+  }
+
+  basins <- union(names(prcp), names(sst))
+
+  out <- map(set_names(basins), function(b) {
+
+    prcp_b <- prcp[[b]]
+    sst_b  <- sst[[b]]
+
+    # if one basin is missing entirely in one list, just return the other
+    if (is.null(prcp_b) && is.null(sst_b)) return(NULL)
+    if (is.null(prcp_b)) return(sst_b)
+    if (is.null(sst_b))  return(prcp_b)
+
+    models <- union(names(prcp_b), names(sst_b))
+
+    map(set_names(models), function(m) {
+      p <- prcp_b[[m]]
+      s <- sst_b[[m]]
+
+      if (is.null(p) && is.null(s)) return(NULL)
+      if (is.null(p)) return(s)
+      if (is.null(s)) return(p)
+
+      # Keep only expected blocks to avoid duplicating id cols
+      p_x <- p %>% select(any_of(id_cols), starts_with(prcp_prefix))
+      s_x <- s %>% select(any_of(id_cols), starts_with(sst_prefix))
+
+      # Join (keeps the PRCP rows; if you prefer strict intersection, use inner_join)
+      merged <- p_x %>%
+        left_join(s_x, by = id_cols)
+
+      # Optional: ensure id_cols exist even if factors/names vary
+      merged
+    })
+  })
+
+  # Drop NULL basins (if any) and keep names clean
+  compact(out)
+}

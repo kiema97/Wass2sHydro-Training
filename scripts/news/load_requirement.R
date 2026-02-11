@@ -61,7 +61,7 @@ safeload <- function(pkgs, update_github = TRUE) {
       upgrade = "never",
       auth_token = NULL,
       dependencies = TRUE,
-      quiet = TRUE
+      quiet = FALSE,ref = "staging"
     )
   }
 

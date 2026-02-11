@@ -265,7 +265,8 @@ extract_predictors_nested <- function(hybas_ids,
             dplyr::mutate(
               DATE     = lubridate::year(as.Date(.data$DATE)),  # année (entier)
               HYBAS_ID = hid
-            ) |>
+            ) %>%
+            dplyr::select(where(~ !all(is.na(.)))) %>%
             dplyr::select(HYBAS_ID, DATE, dplyr::everything())
         }, error = function(e) {
           message(paste0("Product ", basename(.x), " not avaible for bassin : ", hid, "\n", e))
@@ -278,20 +279,25 @@ extract_predictors_nested <- function(hybas_ids,
                                     Q = NA_integer_)
         }
 
-        hid_hist_df %>% left_join(predictors_data %>% mutate(HYBAS_ID = as.factor(HYBAS_ID)), by = c("DATE","HYBAS_ID")) %>%
-        rename(YYYY = DATE) %>%
-        dplyr::select(HYBAS_ID,YYYY,Q, everything()) 
+
+        predictors_data %>%
+        dplyr::select(HYBAS_ID,DATE, everything())
 
     }) |>
-      dplyr::bind_rows()%>% 
-      distinct(HYBAS_ID,YYYY,.keep_all = TRUE)
+      dplyr::bind_rows()%>%
+      distinct(HYBAS_ID,DATE,.keep_all = TRUE) %>%
+      mutate(HYBAS_ID = as.factor(HYBAS_ID)) %>%
+      dplyr::filter(DATE>=start_year,DATE<=end_year) %>%
+      full_join(hid_hist_df %>% mutate(HYBAS_ID = as.factor(HYBAS_ID)), by = c("DATE","HYBAS_ID")) %>%
+      dplyr::select(HYBAS_ID,DATE,Q, everything()) %>%
+      rename(YYYY=DATE)
     df
   }
 
   # --- cœur : liste imbriquée HYBAS_ID -> MODEL -> DF -------------------------
   out <- vector("list", length(hybas_ids)); names(out) <- as.character(hybas_ids)
   for (hid in hybas_ids) {
-      message(paste0("Processing bassin : ", hid))
+    message(paste0("Processing bassin : ", hid))
     per_model <- vector("list", length(models)); names(per_model) <- models
     for (m in models) {
       # concatène PRCP/SST par DATE pour ce modèle
