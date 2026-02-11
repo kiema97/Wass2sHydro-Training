@@ -3,11 +3,11 @@
 # Clean, documented, and beginner-friendly script
 ################################################################################
 # ---- Dependencies ----------------------------------------------------------
-rm(list = ls())
+#rm(list = ls())
 # ==== PARAMETERS (participants only edit this block) ==========================
-PATH_ML_INPUTS <- "outputs/BFA_SST_seasonal_forecast_ml_xgb_20251023_011940.rds"
-PATH_STAT_INPUTS <- "outputs/BFA_SST_seasonal_forecast_ml_xgb_20251023_011940.rds"
-COUNTRY_CODE <- "CIV" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+PATH_ML_INPUTS <- "outputs_ghanas/PRCP_seasonal_forecast_ml_rf_20260210_222430.rds"
+PATH_STAT_INPUTS <- "outputs_ghanas/PRCP_seasonal_forecast_stat_rf_20260210_101805.rds"
+COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
 PREDICTOR_VARS <-"SST"
@@ -15,9 +15,9 @@ PATH_OUTPUT <- "outputs"
 SHP_OUTPUT <- "SHP"
 FINAL_FUSER <- "rf"
 update_github <- TRUE
-fyear <- 2025
-source("scripts/load_requirement.R")
-source("scripts/fused_data_processing.R")
+fyear <- 20260101
+source("scripts/news/load_requirement.R")
+source("scripts/news/fused_data_processing.R")
 
 #--------------------- 4) Compute class probabilities per basin/year-----------------------------------
 yprobas <- probabilities %>%
