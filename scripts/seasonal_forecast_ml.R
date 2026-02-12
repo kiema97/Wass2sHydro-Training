@@ -56,7 +56,6 @@ with_progress({
     .options = furrr_options(seed = TRUE)
   )
 })
-ml_results <- readRDS("WASS2S_Operational_Runs/ml/SST/issue_20260101/exports/SST_seasonal_forecast_ml_rf_20260212_010140.rds")
 plan(sequential)
 # ==============================================================================
 # 4) EXTRACT FUSED PREDICTIONS
