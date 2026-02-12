@@ -177,18 +177,25 @@ message("Numeric outputs saved.")
 
 message("Building probability map ...")
 proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
-                                            data = yprobas,basin_col = "HYBAS_ID" ) + annotation_north_arrow(
-  location = "tr",
-  which_north = "true",
-  style = north_arrow_fancy_orienteering,
-  height = unit(1.2, "cm"),
-  width = unit(1.2, "cm"),
-  pad_x = unit(-0.1, "cm"),
-  pad_y = unit(0.1, "cm")
-)+ annotation_scale(
-  location = "br",
-  width_hint = 0.3
-)+
+                                            data = yprobas,
+                                            basin_col = "HYBAS_ID",
+                                            layers = list(
+                                              list(layer = geom_sf(data=sf_rivers, color ="blue"),
+                                                   position = "above"),
+                                              list(layer = geom_sf(data=country,fill=NA, color ="black"),
+                                                   position = "below")
+                                            )) + annotation_north_arrow(
+                                              location = "tr",
+                                              which_north = "true",
+                                              style = north_arrow_fancy_orienteering,
+                                              height = unit(1.2, "cm"),
+                                              width = unit(1.2, "cm"),
+                                              pad_x = unit(-0.1, "cm"),
+                                              pad_y = unit(0.1, "cm")
+                                            )+ annotation_scale(
+                                              location = "br",
+                                              width_hint = 0.3
+                                            )+
   scale_fill_gradient(
     low = "#deebf7", high = "#08519c",
     name = "Probability",
@@ -202,7 +209,13 @@ message("Building class map ...")
 class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
-                                            type = "class") +
+                                            type = "class",
+                                            layers = list(
+                                              list(layer = geom_sf(data=sf_rivers, color ="blue"),
+                                                   position = "above"),
+                                              list(layer = geom_sf(data=country,fill=NA, color ="black"),
+                                                   position = "below")
+                                            ))+
   theme(plot.margin = margin(0.5, 0.5, 0.5, 0.5) )+
   annotation_north_arrow(
     location = "tr",
@@ -234,12 +247,12 @@ ggsave(filename = filename_proba,
 
 filename_class <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_class_", FINAL_FUSER, "_", timestamp, ".png")
 ggsave(filename = filename_class,
-         plot = class_plot,
-         path = file.path(PATH_OUTPUT,"figures"),
-         width = 9.5,
-         height = 6.5,
-         dpi = 600,
-         bg = "white")
+       plot = class_plot,
+       path = file.path(PATH_OUTPUT,"figures"),
+       width = 9.5,
+       height = 6.5,
+       dpi = 600,
+       bg = "white")
 
 
 message("Done. Outputs saved to: ", normalizePath(PATH_OUTPUT, winslash = "/"))

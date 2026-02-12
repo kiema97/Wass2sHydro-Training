@@ -11,6 +11,7 @@ SST_PATH_INPUTS <-NULL
 COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "D:/CCR_AOS/Wass2sHydro-Training_base/static/GhanaSouth/south/GH_Subbasin.shp"
+PATH_RIVERS <- "static/was_rivers.shp"
 PREDICTOR_VARS <-"SST"
 APPROACH <- "ML"
 WASS2S_ROOT_PARENT <- NULL
@@ -55,9 +56,8 @@ with_progress({
     .options = furrr_options(seed = TRUE)
   )
 })
-
+ml_results <- readRDS("WASS2S_Operational_Runs/ml/SST/issue_20260101/exports/SST_seasonal_forecast_ml_rf_20260212_010140.rds")
 plan(sequential)
-
 # ==============================================================================
 # 4) EXTRACT FUSED PREDICTIONS
 # ==============================================================================
@@ -153,7 +153,7 @@ write.csv(probabilities, file_csv, row.names = FALSE)
 
 file_fused <- file.path(
   file.path(PATH_OUTPUT,"tables"),
-  paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_fused_stat_results_", FINAL_FUSER, "_",timestamp,".csv"))
+  paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_fused_",paste0(tolower(APPROACH)),"_results_", FINAL_FUSER, "_",timestamp,".csv"))
 
 write.csv(fused_all, file_fused, row.names = FALSE)
 
@@ -177,18 +177,25 @@ message("Numeric outputs saved.")
 
 message("Building probability map ...")
 proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
-                                            data = yprobas,basin_col = "HYBAS_ID" ) + annotation_north_arrow(
-                                              location = "tr",
-                                              which_north = "true",
-                                              style = north_arrow_fancy_orienteering,
-                                              height = unit(1.2, "cm"),
-                                              width = unit(1.2, "cm"),
-                                              pad_x = unit(-0.1, "cm"),
-                                              pad_y = unit(0.1, "cm")
-                                            )+ annotation_scale(
-                                              location = "br",
-                                              width_hint = 0.3
-                                            )+
+                                            data = yprobas,basin_col = "HYBAS_ID",
+                                            layers = list(
+                                              list(layer = geom_sf(data=sf_rivers, color ="blue"),
+                                                   position = "above"),
+                                              list(layer = geom_sf(data=country,fill=NA, color ="black"),
+                                                   position = "below")
+                                            )) +
+  annotation_north_arrow(
+    location = "tr",
+    which_north = "true",
+    style = north_arrow_fancy_orienteering,
+    height = unit(1.2, "cm"),
+    width = unit(1.2, "cm"),
+    pad_x = unit(-0.1, "cm"),
+    pad_y = unit(0.1, "cm")
+  )+ annotation_scale(
+    location = "br",
+    width_hint = 0.3
+  )+
   scale_fill_gradient(
     low = "#deebf7", high = "#08519c",
     name = "Probability",
@@ -202,7 +209,13 @@ message("Building class map ...")
 class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
-                                            type = "class") +
+                                            type = "class",
+                                            layers = list(
+                                              list(layer = geom_sf(data=sf_rivers, color ="blue"),
+                                                   position = "above"),
+                                              list(layer = geom_sf(data=country,fill=NA, color ="black"),
+                                                   position = "below")
+                                            )) +
   theme(plot.margin = margin(0.5, 0.5, 0.5, 0.5) )+
   annotation_north_arrow(
     location = "tr",
@@ -222,7 +235,7 @@ print(class_plot)
 # ==============================================================================
 # 8) SAVE MAPS
 # ==============================================================================
-filename_proba <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_probas_", FINAL_FUSER, "_", timestamp, ".png")
+filename_proba <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_",paste0(tolower(APPROACH)),"_probas_", FINAL_FUSER, "_", timestamp, ".png")
 ggsave(filename = filename_proba,
        plot = proba_plot,
        path = file.path(PATH_OUTPUT,"figures"),
@@ -232,7 +245,7 @@ ggsave(filename = filename_proba,
        bg = "white")
 
 
-filename_class <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_class_", FINAL_FUSER, "_", timestamp, ".png")
+filename_class <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_",paste0(tolower(APPROACH)),"_class_", FINAL_FUSER, "_", timestamp, ".png")
 ggsave(filename = filename_class,
        plot = class_plot,
        path = file.path(PATH_OUTPUT,"figures"),

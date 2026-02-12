@@ -95,9 +95,16 @@ a_countries <- sf::st_read(PATH_COUNTRIES, quiet = TRUE) %>%
 a_subs      <- sf::st_read(PATH_SUBBASINS, quiet = TRUE) %>%
   sf::st_make_valid()
 
+a_rivers      <- sf::st_read(PATH_RIVERS, quiet = TRUE) %>%
+  sf::st_make_valid()
+
 # Ensure same CRS
 if (sf::st_crs(a_countries) != sf::st_crs(a_subs)) {
   a_subs <- sf::st_transform(a_subs, sf::st_crs(a_countries))
+}
+
+if (sf::st_crs(a_rivers) != sf::st_crs(a_subs)){
+  a_rivers <- sf::st_transform(a_rivers, sf::st_crs(a_subs))
 }
 
 # Filter country
@@ -114,7 +121,7 @@ subs_sel <- a_subs[sel, ]
 
 sf_basins <- sf::st_intersection(a_subs, country)%>%
   mutate(HYBAS_ID = as.factor(HYBAS_ID))
-
+sf_rivers <- sf::st_intersection(a_rivers, a_subs)
 
 merge_prcp_sst_lists <- function(
     prcp,
