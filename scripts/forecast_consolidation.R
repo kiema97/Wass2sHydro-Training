@@ -16,6 +16,7 @@ SHP_OUTPUT <- "SHP"
 FINAL_FUSER <- "rf"
 update_github <- TRUE
 fyear <- 20260101
+
 source("scripts/news/load_requirement.R")
 source("scripts/news/fused_data_processing.R")
 
@@ -83,10 +84,18 @@ print(proba_plot)
 
 # ---- 6) Class map (above/normal/below) ---------------------------------------
 message("Building class map ...")
+contry_sf <- geom_sf(data = country)
 class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
-                                            type = "class" )+
+                                            type = "class",
+                                            layers = list(
+                                              list(
+                                                layer = ggplot2::geom_sf(data = country, fill = NA, color = "black"),
+                                                position = "below"
+                                              )
+                                            )
+                                            )+
   contry_plot+
   geom_sf_text(data =sf_basins,
                aes(label = HYBAS_ID), size = 2.5,

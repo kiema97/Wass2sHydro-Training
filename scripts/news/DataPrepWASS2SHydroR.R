@@ -5,11 +5,11 @@
 ## Netoyage
 # ==== PARAMETERS (participants only edit this block) ==========================
 COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
-PREDICTOR_VARS <-"PRCP" # "PRCP", "SST"  # choose among available folders under predictors/
+PREDICTOR_VARS <-"SST" # "PRCP", "SST"  # choose among available folders under predictors/
 # Where things live (relative to project root)
 PATH_COUNTRIES   <- "static/was_contries.shp" # shapefile with GMI_CNTRY field
-PATH_SUBBASINS   <-"static/subbassins.shp" #"static/subbassins.shp"     # shapefile with HYBAS_ID field
-PATH_HISTORICAL  <-"data/seasonnal_dicharge_mam_ghana.csv" #"data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
+PATH_SUBBASINS   <-"D:/CCR_AOS/Wass2sHydro-Training_base/static/GhanaSouth/south/GH_Subbasin.shp"#"static/subbassins.shp"     # shapefile with HYBAS_ID field
+PATH_HISTORICAL  <-"D:/CCR_AOS/Wass2sHydro-Training_base/data/GHA_SouthernBassins_Data.csv" #"data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
 PATH_PREDICTORS  <- "predictors"
 PATH_OUTPUT <- "data"
 update_github <- FALSE
@@ -24,8 +24,8 @@ end_year <- 2026
 # Optional: performance/speed knobs
 N_CORES <- 4#max(1, parallel::detectCores() - 1)
 #=========== Configuration files ===================================================
-source("scripts/news/helpers_dp.R")
-source("scripts/news/processing.R")
+source("scripts/helpers_dp.R")
+source("scripts/processing.R")
 
 # 1) Select the user's country and find covered subbasins
 ggplot2::ggplot()+
@@ -48,7 +48,7 @@ ggplot2::ggplot()+
 # 2) Load historical data for selected subbasins
 hist_df <- read_historical_df_yearly(path = PATH_HISTORICAL,
                                      sep = FIELD_SEPERATOR,
-                                     id_col ="HYBAS_ID",
+                                     id_col =HISTORICAL_DATA_ID_COL,
                                      hybas_ids = HYBAS_IDS,
                                      missing_value_code =MISSING_VALUE_CODE,
                                      check_warn =  TRUE,fyear = FYEAR) %>%
@@ -68,6 +68,7 @@ unique(pred_catalog$model)
 
 # Filter by trainee choices
 SELECTED_MODELS <- unique(pred_catalog$model)
+message(c("Available models are : ", paste(SELECTED_MODELS, collapse = " ")))
 pred_catalog <- pred_catalog %>% filter(var %in% PREDICTOR_VARS)
 if (!is.null(SELECTED_MODELS)) {
   pred_catalog <- pred_catalog %>% filter(model %in% SELECTED_MODELS)
@@ -103,7 +104,7 @@ if (!is.null(first_key)) {
 ## 6) Save the prepared list for modeling
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 #savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_training_list_", if(is.null(COUNTRY_CODE)) "ALL" else COUNTRY_CODE, "_obs.rds"))
-savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_WAS_TRAINING_DATA_MAM_2026.rds"))
+savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_WAS_TRAINING_DATA_South_MAM_2026.rds"))
 
 saveRDS(training_list_clean, file =savePath )
 message("Saved: ",savePath)

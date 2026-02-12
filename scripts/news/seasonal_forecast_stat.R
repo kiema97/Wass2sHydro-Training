@@ -6,14 +6,17 @@
 # ==============================================================================
 # 1) CONFIGURATION (participants edit only this section)
 # ==============================================================================
-
-PATH_INPUTS <- "data/SST_WAS_TRAINING_DATA_v2.rds"
+PRCP_PATH_INPUTS <-"data/SST_WAS_TRAINING_DATA_MAM_2026.rds"
+SST_PATH_INPUTS <-NULL
 COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
 PREDICTOR_VARS <-"SST"
+APPROACH <- "STAT"
+WASS2S_ROOT_PARENT <- NULL
+RUN_IN_PARALLEL <- FALSE
+WORKERS <- NULL
 pred_pattern_by_product <- "^(prcp|sst)"
-PATH_OUTPUT <- "outputs_v2"
 FINAL_FUSER <- "rf"
 update_github <- TRUE
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
@@ -23,9 +26,7 @@ fyear <- 20260101
 # ==============================================================================
 # 2) LOAD PACKAGES AND DATA
 # ==============================================================================
-data_by_products <- readRDS(PATH_INPUTS)
-workers <- min(length(data_by_products),max(future::availableCores()-2,1))
-source("scripts/load_required_packages_frcst_v3.R")
+source("scripts/load_required_packages_frcst.R")
 
 # ==============================================================================
 # 3) RUN STATISTICAL FORECASTS
@@ -54,7 +55,7 @@ with_progress({
     .options = furrr_options(seed = TRUE)
   )
 })
-
+#stats_results <- readRDS("outputs_ghanas/PRCP_seasonal_forecast_stat_rf_20260210_101805.rds")
 plan(sequential)
 
 # ==============================================================================
@@ -68,6 +69,27 @@ fused_all <- imap(stats_results, ~ purrr::pluck(.x, 1, "fused_by_model", .defaul
   imap_dfr(~ mutate(.x, HYBAS_ID = .y, .before = 1))
 
 
+
+perf_tbl <- imap_dfr(stats_results, function(basin_obj, basin_id) {
+
+  # si structure imbriquée
+  x <- basin_obj[[basin_id]]
+  if (is.null(x)) x <- basin_obj
+
+  lbs <- x$scores %>%
+    dplyr::select(HYBAS_ID,kge_final,rmse_final)
+  if (is.null(lbs)) return(NULL)
+
+  lbs %>%
+    mutate(
+      approach = APPROACH,
+      predictor = PREDICTOR_VARS,
+      fuser = FINAL_FUSER,
+      .before = 1
+    )
+})
+
+leaderboards <- extract_leaderboards_long(stats_results,meta)
 stats_results2 <- map(names(stats_results), function(id) {
   stats_results[[id]][[id]]
 }) %>%
@@ -114,25 +136,38 @@ yprobas <- probabilities %>%
 # ==============================================================================
 # 6) SAVE NUMERIC OUTPUTS
 # ==============================================================================
-timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-
 file_rds <- file.path(
-  PATH_OUTPUT,
+  file.path(PATH_OUTPUT,"exports"),
   paste0(PREDICTOR_VARS, "_seasonal_forecast_stat_", FINAL_FUSER, "_", timestamp, ".rds")
 )
 
 saveRDS(stats_results, file_rds)
 
 file_csv <- file.path(
-  PATH_OUTPUT,
+  file.path(PATH_OUTPUT,"tables"),
   paste0(COUNTRY_CODE, "_", PREDICTOR_VARS, "_statistic_probabilities_", FINAL_FUSER, "_", timestamp, ".csv")
 )
 
 write.csv(probabilities, file_csv, row.names = FALSE)
 
 
-file_fused <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_fused_stat_results_", FINAL_FUSER, "_",timestamp,".csv"))
+file_fused <- file.path(
+  file.path(PATH_OUTPUT,"tables"),
+  paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_fused_stat_results_", FINAL_FUSER, "_",timestamp,".csv"))
+
 write.csv(fused_all, file_fused, row.names = FALSE)
+
+file_perf_tbl <- file.path(
+  file.path(PATH_OUTPUT,"metrics"),
+  paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_performances_", FINAL_FUSER, "_",timestamp,".csv"))
+
+write.csv(perf_tbl, file_perf_tbl, row.names = FALSE)
+
+file_leaderboards <- file.path(
+  file.path(PATH_OUTPUT,"metrics"),
+  paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_products_performances_", FINAL_FUSER, "_",timestamp,".csv"))
+
+write.csv(leaderboards, file_leaderboards, row.names = FALSE)
 
 message("Numeric outputs saved.")
 
@@ -190,7 +225,7 @@ print(class_plot)
 filename_proba <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_probas_", FINAL_FUSER, "_", timestamp, ".png")
 ggsave(filename = filename_proba,
        plot = proba_plot,
-       path = PATH_OUTPUT,
+       path = file.path(PATH_OUTPUT,"figures"),
        width = 9.5,
        height = 6.5,
        dpi = 600,
@@ -200,7 +235,7 @@ ggsave(filename = filename_proba,
 filename_class <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_stat_class_", FINAL_FUSER, "_", timestamp, ".png")
 ggsave(filename = filename_class,
          plot = class_plot,
-         path = PATH_OUTPUT,
+         path = file.path(PATH_OUTPUT,"figures"),
          width = 9.5,
          height = 6.5,
          dpi = 600,

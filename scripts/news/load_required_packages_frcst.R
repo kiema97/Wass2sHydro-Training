@@ -87,17 +87,6 @@ safeload <- function(pkgs, update_github = TRUE) {
 # Execute once to ensure your working session has everything loaded
 safeload(required_pkgs)
 
-# 1) Plan de parallélisme
-plan(multisession, workers = workers)   # ajuste selon ta machine
-
-# 2) Pattern calculé une seule fois
-pred_pattern_by_product <- paste0("^", tolower(PREDICTOR_VARS), "_")
-
-# 3) Activer la progression
-handlers(global = TRUE)
-handlers("txtprogressbar")  # ou "cli" si tu préfères
-
-
 #------------------- 1) Clip subbasins by country polygon-----------------------------------
 
 # Read shapefiles
@@ -176,4 +165,191 @@ merge_prcp_sst_lists <- function(
 
   # Drop NULL basins (if any) and keep names clean
   compact(out)
+}
+
+safe_readRDS <- function(path) {
+  if (is.null(path)) return(NULL)
+  if (!file.exists(path)) stop("File not found: ", path, call. = FALSE)
+  readRDS(path)
+}
+
+prcp_data_by_products <- safe_readRDS(PRCP_PATH_INPUTS)
+sst_data_by_products  <- safe_readRDS(SST_PATH_INPUTS)
+
+if (is.null(prcp_data_by_products) && is.null(sst_data_by_products)) {
+  stop("You must provide at least one input: PRCP_PATH_INPUTS or SST_PATH_INPUTS.", call. = FALSE)
+}
+
+data_by_products <- if (is.null(prcp_data_by_products)){
+  sst_data_by_products
+}else if(is.null(sst_data_by_products)) {prcp_data_by_products
+} else{
+  merge_prcp_sst_lists(prcp_data_by_products, sst_data_by_products)
+  PREDICTOR_VARS <-"PRCP-SST"
+}
+
+
+
+
+# 1) Choose number of workers (safe defaults)
+# ------------------------------------------------------------------------------
+if (!isTRUE(RUN_IN_PARALLEL)) {
+  workers <- 1L
+} else if (!is.null(WORKERS)) {
+  workers <- as.integer(WORKERS)
+  if (is.na(workers) || workers < 1L) {
+    stop("WORKERS must be a positive integer.", call. = FALSE)
+  }
+} else {
+  workers <- min(length(data_by_products), max(future::availableCores() - 2L, 1L))
+}
+
+
+# ------------------------------------------------------------------------------
+# 2) Parallel plan
+# - If not parallel, use sequential to avoid any multisession overhead
+# ------------------------------------------------------------------------------
+if (workers <= 1L) {
+  future::plan(future::sequential)
+} else {
+  future::plan(future::multisession, workers = workers)
+}
+
+message("Workers used: ", workers)
+# ------------------------------------------------------------------------------
+# 4) Progress handlers
+# ------------------------------------------------------------------------------
+progressr::handlers(global = TRUE)
+progressr::handlers("txtprogressbar")  # or "cli" if you prefer
+
+# ==============================================================================
+# 1bis) WORKSPACE SETUP (auto-create operational folders)
+# ==============================================================================
+
+WASS2S_ROOT_NAME <- "WASS2S_Operational_Runs"
+
+# If NULL -> create in current working directory
+#WASS2S_ROOT_PARENT <- NULL  # e.g. "D:/CCR_AOS/Operational" or NULL
+
+PREDICTOR_SET <- PREDICTOR_VARS
+RUN_ID <- sprintf("issue_%s", fyear)
+
+init_wass2s_workspace <- function(
+    root_parent = NULL,
+    root_name = "WASS2S_Operational_Runs",
+    approach,
+    predictor_set,
+    run_id,
+    subdirs = c("figures",
+                "tables",
+                "logs",
+                "exports","metrics",
+                "models", "consolidations"),
+    create = TRUE
+) {
+  # ---- sanitize strings for folder names ----
+  approach <- tolower(approach)
+  predictor_set <- gsub("[^A-Za-z0-9_]+", "_", toupper(predictor_set))
+  run_id <- gsub("[^A-Za-z0-9_]+", "_", run_id)
+
+  # ---- root location ----
+  root <- if (is.null(root_parent)) {
+    file.path(getwd(), root_name)
+  } else {
+    file.path(root_parent, root_name)
+  }
+
+  # ---- main run directory ----
+  run_dir <- file.path(root, approach, predictor_set,  run_id)
+
+  # ---- create directories ----
+  if (isTRUE(create)) {
+    dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
+    for (d in subdirs) dir.create(file.path(run_dir, d), recursive = TRUE, showWarnings = FALSE)
+  }
+
+  # return paths
+  out <- list(
+    root = root,
+    run_dir = run_dir
+  )
+  for (d in subdirs) out[[d]] <- file.path(run_dir, d)
+
+  out
+}
+
+ws <- init_wass2s_workspace(
+  root_parent = WASS2S_ROOT_PARENT,
+  root_name = WASS2S_ROOT_NAME,
+  approach = APPROACH,
+  predictor_set = PREDICTOR_SET,
+  run_id = RUN_ID
+)
+
+message("WASS2S workspace: ", ws$run_dir)
+
+timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+PATH_OUTPUT_ <- if(is.null(WASS2S_ROOT_PARENT)) "WASS2S_Operational_Runs" else WASS2S_ROOT_PARENT
+PATH_OUTPUT <- file.path(PATH_OUTPUT_,tolower(APPROACH),PREDICTOR_VARS,RUN_ID)
+
+
+get_basin_payload <- function(basin_obj, basin_id) {
+  # Try the common nested structure first
+  x <- basin_obj[[basin_id]]
+  if (!is.null(x)) return(x)
+
+  # If already "flat" (basin_obj itself contains leaderboards)
+  basin_obj
+}
+
+meta <- tibble(
+  approach = APPROACH,
+  predictors = PREDICTOR_VARS,
+  final_fuser = FINAL_FUSER
+)
+extract_leaderboards_long <- function(rds_obj, meta) {
+
+  # The outer object may already be a list of basins,
+  # or a list with a basins list inside. We assume named list by HYBAS_ID.
+  basin_ids <- names(rds_obj)
+  if (is.null(basin_ids) || length(basin_ids) == 0) {
+    warning("RDS object has no names(); cannot infer basin IDs for file: ", meta$file)
+    return(tibble())
+  }
+
+  imap_dfr(rds_obj, function(basin_obj, basin_id) {
+
+    payload <- get_basin_payload(basin_obj, basin_id)
+
+    lbs <- payload$leaderboards
+    if (is.null(lbs) || length(lbs) == 0) return(tibble())
+
+    imap_dfr(lbs, function(lb_df, model_name) {
+      if (is.null(lb_df) || !is.data.frame(lb_df) || nrow(lb_df) == 0) return(tibble())
+
+      # Expected columns: product, kge, weight
+      out <- as_tibble(lb_df)
+
+      # Defensive: ensure columns exist / standardize names
+      nms <- names(out)
+      if (!("product" %in% nms)) out$product <- NA_character_
+      if (!("kge" %in% nms))     out$kge     <- NA_real_
+      if (!("weight" %in% nms))  out$weight  <- NA_real_
+
+      out %>%
+        transmute(
+          HYBAS_ID = as.character(basin_id),
+          model = as.character(model_name),
+          product = as.character(product),
+          kge = as.numeric(kge),
+          weight = as.numeric(weight)
+        ) %>%
+        mutate(
+          predictors = meta$predictors,
+          approach = meta$approach,
+          final_fuser = meta$final_fuser,
+          .before = 1
+        )
+    })
+  })
 }
