@@ -10,7 +10,7 @@ PRCP_PATH_INPUTS <-"data/SST_WAS_TRAINING_DATA_South_MAM_2026.rds"
 SST_PATH_INPUTS <-NULL
 COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
-PATH_SUBBASINS   <- "D:/CCR_AOS/Wass2sHydro-Training_base/static/GhanaSouth/south/GH_Subbasin.shp"
+PATH_SUBBASINS   <- "static/was_southern_subbasins.shp"
 PATH_RIVERS <- "static/was_rivers.shp"
 PREDICTOR_VARS <-"SST"
 APPROACH <- "ML"
@@ -22,7 +22,7 @@ MODELS <- c("rf","svmlinear","mlp")
 FINAL_FUSER <- "rf"
 update_github <- TRUE
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
-fyears <- c(2020,2025)
+fyears <- c(20200101,20250101)
 fyear <- 20260101
 
 # ==============================================================================
@@ -117,14 +117,16 @@ message("Computing class probabilities ...")
 probabilities <- map(hybas_ids,~{
   ml_pred <- ml_preds %>%
     dplyr::filter(HYBAS_ID == .x)
-  rr <- c(ml_pred$Q-ml_pred$pred)^2
 
-  error_sd <- sd(c(ml_pred$Q-ml_pred$pred),na.rm = TRUE)
-  error_rmse <- sqrt(mean(rr,na.rm = TRUE))
+  q_hist <- ml_pred %>%
+    dplyr::filter(YYYY<=min(fyears))
+  # rr <- c(ml_pred$Q-ml_pred$pred)^2
+  #
+  # error_sd <- sd(c(q_hist$Q-q_hist$pred),na.rm = TRUE)
+  # error_rmse <- sqrt(mean(rr,na.rm = TRUE))
 
   proba <- WASS2SHydroR::wass2s_class_from_forecast(df = ml_pred,
-                                                    q_hist = ml_pred$Q,
-                                                    sigma =error_sd )
+                                                    q_hist = q_hist$Q )
   return(proba)
 }) %>% bind_rows()
 
@@ -176,7 +178,8 @@ message("Numeric outputs saved.")
 
 message("Building probability map ...")
 proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
-                                            data = yprobas,basin_col = "HYBAS_ID",
+                                            data = yprobas,
+                                            basin_col = "HYBAS_ID",
                                             layers = list(
                                               list(layer = geom_sf(data=sf_rivers, color ="blue"),
                                                    position = "above"),
