@@ -5,3 +5,4 @@
 *.nc
 predictors/**/*.nc
 data/**/*.nc
+data/*.rds
