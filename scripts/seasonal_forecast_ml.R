@@ -6,13 +6,13 @@
 # ==============================================================================
 # 1) CONFIGURATION (participants edit only this section)
 # ==============================================================================
-PRCP_PATH_INPUTS <-"data/SST_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
+PRCP_PATH_INPUTS <-"data/PRCP_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
 SST_PATH_INPUTS <-NULL
 COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_presagg_countries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/was_southern_subbasins.shp"
 PATH_RIVERS <- "static/was_rivers.shp"
-PREDICTOR_VARS <-"SST"
+PREDICTOR_VARS <-"PRCP"
 APPROACH <- "ML"
 WASS2S_ROOT_PARENT <- NULL
 RUN_IN_PARALLEL <- TRUE
@@ -24,7 +24,7 @@ update_github <- FALSE
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 fyears <- c(20200101,20250101)
 fyear <- 20260101
-
+issue_date <- 20260201
 # ==============================================================================
 # 2) LOAD PACKAGES AND DATA
 # ==============================================================================

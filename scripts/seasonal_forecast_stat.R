@@ -6,23 +6,24 @@
 # ==============================================================================
 # 1) CONFIGURATION (participants edit only this section)
 # ==============================================================================
-PRCP_PATH_INPUTS <-"data/SST_WAS_TRAINING_DATA_MAM_2026.rds"
+PRCP_PATH_INPUTS <-"data/PRCP_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
 SST_PATH_INPUTS <-NULL
-COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
-PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
-PATH_SUBBASINS   <- "static/subbassins.shp"
-PREDICTOR_VARS <-"SST"
+COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+PATH_COUNTRIES   <- "static/was_presagg_countries.shp"   # shapefile with GMI_CNTRY field
+PATH_SUBBASINS   <- "static/was_southern_subbasins.shp"
+PATH_RIVERS <- "static/was_rivers.shp"
+PREDICTOR_VARS <-"PRCP"
 APPROACH <- "STAT"
 WASS2S_ROOT_PARENT <- NULL
-RUN_IN_PARALLEL <- FALSE
-WORKERS <- NULL
+RUN_IN_PARALLEL <- TRUE
+WORKERS <- 20
 pred_pattern_by_product <- "^(prcp|sst)"
 FINAL_FUSER <- "rf"
 update_github <- TRUE
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
-fyears <- c(2020,2025)
+fyears <- c(20200101,20250101)
 fyear <- 20260101
-
+issue_date <- 20260201
 # ==============================================================================
 # 2) LOAD PACKAGES AND DATA
 # ==============================================================================
