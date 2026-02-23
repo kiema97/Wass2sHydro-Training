@@ -121,7 +121,13 @@ subs_sel <- a_subs[sel, ]
 
 sf_basins <- sf::st_intersection(a_subs, country)%>%
   mutate(HYBAS_ID = as.factor(HYBAS_ID))
-sf_rivers <- sf::st_intersection(a_rivers, a_subs)
+
+subs_union <- a_subs %>%
+  st_make_valid() %>%
+  st_union() %>%
+  st_as_sf()
+
+sf_rivers <- sf::st_intersection(a_rivers, subs_union)
 
 merge_prcp_sst_lists <- function(
     prcp,
