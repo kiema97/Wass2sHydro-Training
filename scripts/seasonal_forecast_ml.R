@@ -6,21 +6,21 @@
 # ==============================================================================
 # 1) CONFIGURATION (participants edit only this section)
 # ==============================================================================
-PRCP_PATH_INPUTS <-"data/SST_WAS_TRAINING_DATA_South_MAM_2026.rds"
+PRCP_PATH_INPUTS <-"data/SST_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
 SST_PATH_INPUTS <-NULL
-COUNTRY_CODE <- "GHA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
-PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
+COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+PATH_COUNTRIES   <- "static/was_presagg_countries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/was_southern_subbasins.shp"
 PATH_RIVERS <- "static/was_rivers.shp"
 PREDICTOR_VARS <-"SST"
 APPROACH <- "ML"
 WASS2S_ROOT_PARENT <- NULL
 RUN_IN_PARALLEL <- TRUE
-WORKERS <- NULL
+WORKERS <- 20
 pred_pattern_by_product <- "^(prcp|sst)"
 MODELS <- c("rf","svmlinear","mlp")
 FINAL_FUSER <- "rf"
-update_github <- TRUE
+update_github <- FALSE
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 fyears <- c(20200101,20250101)
 fyear <- 20260101

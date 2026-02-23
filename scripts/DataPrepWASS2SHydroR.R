@@ -5,7 +5,7 @@
 ## Netoyage
 # ==== PARAMETERS (participants only edit this block) ==========================
 COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
-PREDICTOR_VARS <-"SST" # "PRCP", "SST"  # choose among available folders under predictors/
+PREDICTOR_VARS <-"PRCP" # "PRCP", "SST"  # choose among available folders under predictors/
 # Where things live (relative to project root)
 PATH_COUNTRIES   <- "static/was_southern_subbasins.shp" # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <-"static/was_southern_subbasins.shp"#"static/subbassins.shp"     # shapefile with HYBAS_ID field
