@@ -280,7 +280,7 @@ WASS2S_ROOT_NAME <- "WASS2S_Operational_Runs"
 #WASS2S_ROOT_PARENT <- NULL  # e.g. "D:/CCR_AOS/Operational" or NULL
 
 PREDICTOR_SET <- PREDICTOR_VARS
-RUN_ID <- sprintf("issue_%s", fyear)
+RUN_ID <- sprintf("issue_%s", issue_date)
 
 init_wass2s_workspace <- function(
     root_parent = NULL,

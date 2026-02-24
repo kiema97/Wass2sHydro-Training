@@ -21,7 +21,6 @@ pred_pattern_by_product <- "^(prcp|sst)"
 MODELS <- c("rf","svmlinear","mlp")
 FINAL_FUSER <- "rf"
 update_github <- FALSE
-dir.create(PATH_OUTPUT, showWarnings = FALSE)
 fyears <- c(20200101,20260101)
 fyear <- 20260101
 issue_date <- 20260201
