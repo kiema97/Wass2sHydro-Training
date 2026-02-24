@@ -128,8 +128,8 @@ subs_union <- a_subs %>%
   st_union() %>%
   st_as_sf()
 
-sf_rivers <- sf::st_intersection(a_rivers, country)
-sf_rivers <- sf::st_intersection(sf_rivers, subs_union)
+sf_rivers_ <- sf::st_intersection(a_rivers, country)
+sf_rivers <- sf::st_intersection(sf_rivers_, subs_union)
 merge_prcp_sst_lists <- function(
     prcp,
     sst,
@@ -223,7 +223,7 @@ auto_pca <- res$flags$auto_pca
 apply_corr <- res$flags$apply_corr
 apply_normalize <- res$flags$apply_normalize
 apply_impute <- res$flags$apply_impute
-
+impute_nominal <- res$flags$impute_nominal
 if (is.null(prcp_data_by_products) && is.null(sst_data_by_products)) {
   stop("You must provide at least one input: PRCP_PATH_INPUTS or SST_PATH_INPUTS.", call. = FALSE)
 }
