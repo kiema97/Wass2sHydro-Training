@@ -129,7 +129,7 @@ subs_union <- a_subs %>%
   st_as_sf()
 
 sf_rivers <- sf::st_intersection(a_rivers, country)
-
+sf_rivers <- sf::st_intersection(sf_rivers, subs_union)
 merge_prcp_sst_lists <- function(
     prcp,
     sst,
