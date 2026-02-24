@@ -86,7 +86,7 @@ safeload <- function(pkgs, update_github = TRUE) {
 
 # Execute once to ensure your working session has everything loaded
 safeload(required_pkgs)
-
+source("scripts/reduce_data_by_products_eof.R")
 #------------------- 1) Clip subbasins by country polygon-----------------------------------
 
 # Read shapefiles
@@ -127,7 +127,7 @@ subs_union <- a_subs %>%
   st_union() %>%
   st_as_sf()
 
-sf_rivers <- sf::st_intersection(a_rivers, subs_union)
+sf_rivers <- sf::st_intersection(a_rivers, country)
 
 merge_prcp_sst_lists <- function(
     prcp,
@@ -180,14 +180,48 @@ merge_prcp_sst_lists <- function(
   compact(out)
 }
 
-safe_readRDS <- function(path) {
-  if (is.null(path)) return(NULL)
-  if (!file.exists(path)) stop("File not found: ", path, call. = FALSE)
-  readRDS(path)
-}
+# safe_readRDS <- function(path) {
+#   if (is.null(path)) return(NULL)
+#   if (!file.exists(path)) stop("File not found: ", path, call. = FALSE)
+#   readRDS(path)
+# }
+#
+#
+# prcp_data_by_products <- safe_readRDS(PRCP_PATH_INPUTS)
+# sst_data_by_products  <- safe_readRDS(SST_PATH_INPUTS)
+#
+# auto_pca = TRUE
+# apply_corr = TRUE
+# apply_normalize = TRUE
+# apply_impute = TRUE
+#
+# if(!is.null(sst_data_by_products)){
+#   res_eof <- reduce_data_by_products_eof(
+#     sst_data_by_products,
+#     sst_regex = "^sst_",
+#     num_comp = 15,
+#     corr_threshold = 0.99,
+#     corr_method = "pearson",
+#     remove_linear_comb = FALSE,
+#     eof_prefix = "sst_eof_",
+#     verbose = TRUE
+#   )
+#
+#   sst_data_by_products <- res_eof$data_reduced
+#
+#   auto_pca = FALSE
+#   apply_corr = FALSE
+#   apply_normalize = FALSE
+#   apply_impute = FALSE
+# }
 
-prcp_data_by_products <- safe_readRDS(PRCP_PATH_INPUTS)
-sst_data_by_products  <- safe_readRDS(SST_PATH_INPUTS)
+res <- validate_and_load_predictors(PRCP_PATH_INPUTS, SST_PATH_INPUTS)
+prcp_data_by_products <- res$prcp_data_by_products
+sst_data_by_products <- res$sst_data_by_products
+auto_pca <- res$flags$auto_pca
+apply_corr <- res$flags$apply_corr
+apply_normalize <- res$flags$apply_normalize
+apply_impute <- res$flags$apply_impute
 
 if (is.null(prcp_data_by_products) && is.null(sst_data_by_products)) {
   stop("You must provide at least one input: PRCP_PATH_INPUTS or SST_PATH_INPUTS.", call. = FALSE)
