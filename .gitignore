@@ -6,3 +6,4 @@
 predictors/**/*.nc
 data/**/*.nc
 data/*.rds
+WASS2S_Operational_Runs/
