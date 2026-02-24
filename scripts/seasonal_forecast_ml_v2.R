@@ -57,7 +57,8 @@ with_progress({
                            auto_pca = auto_pca,
                            apply_corr = apply_corr,
                            apply_normalize = apply_normalize,
-                           apply_impute = apply_impute
+                           apply_impute = apply_impute,
+                           impute_nominal = impute_nominal
                            )
     },
     .options = furrr_options(seed = TRUE)

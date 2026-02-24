@@ -4,10 +4,10 @@
 
 ## Netoyage
 # ==== PARAMETERS (participants only edit this block) ==========================
-COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
-PREDICTOR_VARS <-"PRCP" # "PRCP", "SST"  # choose among available folders under predictors/
+COUNTRY_CODE <- "NGA" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+PREDICTOR_VARS <-"SST" # "PRCP", "SST"  # choose among available folders under predictors/
 # Where things live (relative to project root)
-PATH_COUNTRIES   <- "static/was_southern_subbasins.shp" # shapefile with GMI_CNTRY field
+PATH_COUNTRIES   <- "static/was_presagg_countries.shp" # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <-"static/was_southern_subbasins.shp"#"static/subbassins.shp"     # shapefile with HYBAS_ID field
 PATH_HISTORICAL  <-"data/was_southern_subbassins_seasonnal_discharge_lev5.csv" #"data/was_subbassins_seasonal_data.csv" # columns: DATE, HYBAS_ID, Q, prcp, evap
 PATH_PREDICTORS  <- "predictors"
@@ -19,7 +19,7 @@ MISSING_VALUE_CODE <-  "-999"
 HISTORICAL_DATA_ID_COL <- "HYBAS_ID"
 SUBBASINS_ID_COL <- "HYBAS_ID"
 FYEAR <- 2026
-start_year <- 1993
+start_year <- 1990
 end_year <- 2026
 # Optional: performance/speed knobs
 N_CORES <- 4#max(1, parallel::detectCores() - 1)
@@ -104,7 +104,8 @@ if (!is.null(first_key)) {
 ## 6) Save the prepared list for modeling
 dir.create(PATH_OUTPUT, showWarnings = FALSE)
 #savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_training_list_", if(is.null(COUNTRY_CODE)) "ALL" else COUNTRY_CODE, "_obs.rds"))
-savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"))
+if(is.null(COUNTRY_CODE)) savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"))
+if(!is.null(COUNTRY_CODE)) savePath <- file.path(PATH_OUTPUT, paste0(PREDICTOR_VARS,"_",COUNTRY_CODE,"_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"))
 
 saveRDS(training_list_clean, file =savePath )
 message("Saved: ",savePath)

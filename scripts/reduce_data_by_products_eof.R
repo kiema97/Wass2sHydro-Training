@@ -313,6 +313,7 @@ validate_and_load_predictors <- function(
   apply_corr <- TRUE
   apply_normalize <- TRUE
   apply_impute <- TRUE
+  impute_nominal <- TRUE
 
   # ---- EOF for SST if present ----
   eof_objects <- NULL
@@ -336,6 +337,7 @@ validate_and_load_predictors <- function(
     apply_corr <- FALSE
     apply_normalize <- FALSE
     apply_impute <- FALSE
+    impute_nominal <- FALSE
   }
 
   list(
@@ -346,7 +348,8 @@ validate_and_load_predictors <- function(
       auto_pca = auto_pca,
       apply_corr = apply_corr,
       apply_normalize = apply_normalize,
-      apply_impute = apply_impute
+      apply_impute = apply_impute,
+      impute_nominal = impute_nominal
     )
   )
 }
