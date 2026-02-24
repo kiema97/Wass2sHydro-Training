@@ -64,6 +64,7 @@ with_progress({
     .options = furrr_options(seed = TRUE)
   )
 })
+
 plan(sequential)
 # ==============================================================================
 # 4) EXTRACT FUSED PREDICTIONS

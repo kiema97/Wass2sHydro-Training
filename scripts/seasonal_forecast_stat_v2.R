@@ -235,9 +235,7 @@ class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
     location = "br",
     width_hint = 0.3
   )
-
 print(class_plot)
-
 # ==============================================================================
 # 8) SAVE MAPS
 # ==============================================================================

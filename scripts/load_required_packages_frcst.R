@@ -108,6 +108,7 @@ if (sf::st_crs(a_rivers) != sf::st_crs(a_subs)){
 }
 
 # Filter country
+
 country <- a_countries
 if(!is.null(COUNTRY_CODE)){
   country <- country %>% filter(.data$GMI_CNTRY == COUNTRY_CODE)
