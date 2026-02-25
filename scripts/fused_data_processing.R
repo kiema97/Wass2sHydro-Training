@@ -1,12 +1,16 @@
 #------------------- 1) Clip subbasins by country polygon-----------------------------------
-dir.create(PATH_OUTPUT, showWarnings = FALSE)
-dir.create(file.path(PATH_OUTPUT,SHP_OUTPUT),showWarnings = FALSE,recursive = TRUE)
+safe_read_sf<- function(path) {
+  if (is.null(path)) return(NULL)
+  if (!file.exists(path)) stop("File not found: ", path, call. = FALSE)
+  sf::st_read(path, quiet = TRUE) %>%
+    sf::st_make_valid()
+}
+
+dir.create(file.path(savePath,SHP_OUTPUT),showWarnings = FALSE,recursive = TRUE)
 
 # Read shapefiles
-a_countries <- sf::st_read(PATH_COUNTRIES, quiet = TRUE) %>%
-  sf::st_make_valid()
-a_subs      <- sf::st_read(PATH_SUBBASINS, quiet = TRUE) %>%
-  sf::st_make_valid()
+a_countries <-safe_read_sf(PATH_COUNTRIES)
+a_subs      <- safe_read_sf(PATH_SUBBASINS)
 
 # Ensure same CRS
 if (sf::st_crs(a_countries) != sf::st_crs(a_subs)) {
@@ -23,7 +27,10 @@ if(!is.null(COUNTRY_CODE)){
   country <- country %>% filter(.data$GMI_CNTRY == COUNTRY_CODE)
   if (nrow(country) == 0) stop("No country with GMI_CNTRY == ", COUNTRY_CODE)
 }
-
+country_union <- country %>%
+  st_make_valid() %>%
+  st_union() %>%
+  st_as_sf()
 # Intersections: subbasins partially or fully covered by the country polygon
 inter_idx <- sf::st_intersects(a_subs, country, sparse = TRUE)
 sel <- lengths(inter_idx) > 0
@@ -54,23 +61,32 @@ if (sf::st_crs(a_rivers) != sf::st_crs(a_outlets)){
   a_outlets <- sf::st_transform(a_outlets, sf::st_crs(a_rivers))
 }
 
-sf_basins <- sf::st_intersection(a_subs, country)%>%
+sf_basins <- sf::st_intersection(a_subs, country_union)%>%
   mutate(HYBAS_ID = as.factor(HYBAS_ID))
+
+
 
 subs_union <- a_subs %>%
   st_make_valid() %>%
   st_union() %>%
   st_as_sf()
 
-sf_rivers_ <- sf::st_intersection(a_rivers, country)
+
+sf_rivers_ <- sf::st_intersection(a_rivers, country_union)
 sf_rivers <- sf::st_intersection(sf_rivers_, subs_union)
 
-sf_masque <- sf::st_intersection(a_masque,country)
-sf_outlets_ <- sf::st_intersection(a_outlets,country)
+sf_masque <- sf::st_intersection(a_masque,country_union)
+masq_union <- sf_masque %>%
+  st_make_valid() %>%
+  st_union() %>%
+  st_as_sf()
+
+
+sf_outlets_ <- sf::st_intersection(a_outlets,country_union)
 sf_outlets <- sf::st_intersection(sf_outlets_,subs_union)
 if(!is.null(sf_masque)){
-  sf_basins <- sf::st_intersection(sf_basins,sf_masque)
-  sf_rivers <- sf::st_intersection(sf_rivers,sf_masque)
+  sf_basins <- sf::st_intersection(sf_basins,masq_union)
+  sf_rivers <- sf::st_intersection(sf_rivers,masq_union)
 }
 
 #------------------- 2)Forecast data processing -----------------------------------
@@ -191,8 +207,8 @@ performances_metrics <- consolidated_frcsts %>%
             CORR =  wass2s_corr(Q,pred))
 {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  file_path_consolidated_frcsts <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_consolidated_", FINAL_FUSER, "_",timestamp,".csv"))
-  file_path_performance <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_performances_", FINAL_FUSER, "_",timestamp,".csv"))
+  file_path_consolidated_frcsts <- file.path(savePath,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_consolidated_", FINAL_FUSER, "_",timestamp,".csv"))
+  file_path_performance <- file.path(savePath,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_performances_", FINAL_FUSER, "_",timestamp,".csv"))
 
   write.table(x = performances_metrics,
               file =file_path_performance ,append =FALSE ,quote = FALSE,sep ="," ,row.names = FALSE)
@@ -224,7 +240,7 @@ probabilities <- map(hybas_ids,~{
 
 {
   timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  file_path_proba <- file.path(PATH_OUTPUT,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_consolidated_probabilities_", FINAL_FUSER, "_",timestamp,".csv"))
+  file_path_proba <- file.path(savePath,paste0(COUNTRY_CODE,"_",PREDICTOR_VARS,"_seasonal_forecast_consolidated_probabilities_", FINAL_FUSER, "_",timestamp,".csv"))
   write.table(x = probabilities,file =file_path_proba ,append =FALSE ,quote = FALSE,sep ="," ,row.names = FALSE)
 
 

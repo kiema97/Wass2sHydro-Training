@@ -6,12 +6,15 @@
 # ==============================================================================
 # 1) CONFIGURATION (participants edit only this section)
 # ==============================================================================
-PRCP_PATH_INPUTS <-"D:/CCR_AOS/Wass2sHydro-Training - Copie/data/SST_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
-SST_PATH_INPUTS <-NULL
+PRCP_PATH_INPUTS <- "D:/CCR_AOS/Wass2sHydro-Training - Copie/data/PRCP_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
+SST_PATH_INPUTS <- NULL
 COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_presagg_countries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/was_southern_subbasins.shp"
 PATH_RIVERS <- "static/was_rivers.shp"
+PATH_MASQUE <- "static/was_southern_subbasins_lev6.shp"
+PATH_WAS <- NULL
+PATH_OUTLETS <- "static/outlets.shp"
 PREDICTOR_VARS <-"SST"
 APPROACH <- "STAT"
 WASS2S_ROOT_PARENT <- NULL
@@ -19,8 +22,7 @@ RUN_IN_PARALLEL <- TRUE
 WORKERS <- 20
 pred_pattern_by_product <- "^(prcp|sst)"
 FINAL_FUSER <- "rf"
-update_github <- TRUE
-dir.create(PATH_OUTPUT, showWarnings = FALSE)
+update_github <- FALSE
 fyears <- c(20200101,20260101)
 fyear <- 20260101
 issue_date <- 20260201
@@ -32,6 +34,8 @@ source("scripts/load_required_packages_frcst.R")
 # ==============================================================================
 # 3) RUN STATISTICAL FORECASTS
 # ==============================================================================
+stats_results <- readRDS("WASS2S_Operational_Runs/stat/SST/issue_20260201/exports/SST_seasonal_forecast_stat_rf_20260225_104953.rds")
+
 with_progress({
   p <- progressor(along = data_by_products)
   stats_results <- future_map(
@@ -61,7 +65,6 @@ with_progress({
     .options = furrr_options(seed = TRUE)
   )
 })
-#stats_results <- readRDS("outputs_ghanas/PRCP_seasonal_forecast_stat_rf_20260210_101805.rds")
 plan(sequential)
 
 # ==============================================================================
@@ -180,17 +183,35 @@ message("Numeric outputs saved.")
 # ==============================================================================
 # 7) BUILD MAPS
 # ==============================================================================
-
 message("Building probability map ...")
+layers <- list(
+  list(layer = geom_sf(data=sf_rivers, color ="blue",size=0.5),
+       position = "above"),
+  list(layer = geom_sf(data=sf_masque, fill=NA),
+       position = "above"),
+  list(layer = geom_sf(data=sf_outlets, color="black",size=0.9,alpha=0.8, type=2),
+       position = "above"),
+  list(layer = geom_sf(data=country,fill=NA, color ="gray"), position = "above")#,
+  #if(!is.null(a_was)) list(layer = geom_sf(data=a_was,fill=NA, color ="black"), position = "below")
+)
+
+
+res <- plot_entropy_map_facet(
+  df_entropy = probabilities,
+  sf_bassins = sf_basins,
+  period_start = 20200101,
+  period_end   = 20260101,
+  facet_by = "year",
+  agg = "mean"   # utile si plusieurs lignes par bassin-année
+)
+entropy_plot <- res$plot+
+  geom_sf(data=country, fill=NA)
+
+
 proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
-                                            layers = list(
-                                              list(layer = geom_sf(data=sf_rivers, color ="blue"),
-                                                   position = "above"),
-                                              list(layer = geom_sf(data=country,fill=NA, color ="black"),
-                                                   position = "below")
-                                            )) + annotation_north_arrow(
+                                            layers = layers) + annotation_north_arrow(
                                               location = "tr",
                                               which_north = "true",
                                               style = north_arrow_fancy_orienteering,
@@ -216,12 +237,7 @@ class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
                                             type = "class",
-                                            layers = list(
-                                              list(layer = geom_sf(data=sf_rivers, color ="blue"),
-                                                   position = "above"),
-                                              list(layer = geom_sf(data=country,fill=NA, color ="black"),
-                                                   position = "below")
-                                            ))+
+                                            layers = layers)+
   theme(plot.margin = margin(0.5, 0.5, 0.5, 0.5) )+
   annotation_north_arrow(
     location = "tr",
@@ -259,4 +275,13 @@ ggsave(filename = filename_class,
        bg = "white")
 
 
+filename_entropy <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_",paste0(tolower(APPROACH)),"_entropy_", FINAL_FUSER, "_", timestamp, ".png")
+ggsave(filename = filename_entropy,
+       plot = entropy_plot,
+       path = file.path(PATH_OUTPUT,"figures"),
+       width = 9.5,
+       height = 6.5,
+       dpi = 600,
+       bg = "white")
 message("Done. Outputs saved to: ", normalizePath(PATH_OUTPUT, winslash = "/"))
+
