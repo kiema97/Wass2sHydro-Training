@@ -6,17 +6,21 @@
 # ==============================================================================
 # 1) CONFIGURATION (participants edit only this section)
 # ==============================================================================
-PRCP_PATH_INPUTS <- "D:/CCR_AOS/Wass2sHydro-Training - Copie/data/SST_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
-SST_PATH_INPUTS <-NULL
-COUNTRY_CODE <- NULL # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
+PRCP_PATH_INPUTS <- "data/countries_data/PRCP_BEN_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds" #"D:/CCR_AOS/Wass2sHydro-Training - Copie/data/PRCP_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
+SST_PATH_INPUTS <- NULL #"D:/CCR_AOS/Wass2sHydro-Training - Copie/data/SST_WAS_SOUTHERN_SUBBASSINS_DATA_MAMJ_2026.rds"
+COUNTRY_CODE <- "BEN" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_presagg_countries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/was_southern_subbasins.shp"
 PATH_RIVERS <- "static/was_rivers.shp"
-PREDICTOR_VARS <-"SST"
+PATH_MASQUE <- "static/was_southern_subbasins_lev6.shp"
+PATH_WAS <- "D:/CCR_AOS/DATA/SIG/cilss/SIG/Afric_Ouest/afriqouest.shp"
+PATH_WAS <- NULL
+PATH_OUTLETS <- "static/outlets.shp"
+PREDICTOR_VARS <-"PRCP"
 APPROACH <- "ML"
 WASS2S_ROOT_PARENT <- NULL
 RUN_IN_PARALLEL <- TRUE
-WORKERS <- 18
+WORKERS <- 8
 pred_pattern_by_product <- "^(prcp|sst)"
 MODELS <- c("rf","svmlinear","mlp")
 FINAL_FUSER <- "rf"
@@ -32,7 +36,7 @@ source("scripts/load_required_packages_frcst.R")
 # ==============================================================================
 # 3) RUN STATISTICAL FORECASTS
 # ==============================================================================
-options(future.globals.maxSize = 12 * 1024^3)
+#options(future.globals.maxSize = 12 * 1024^3)
 
 message("Running ML forecasts (per product) ...")
 with_progress({
@@ -141,13 +145,12 @@ probabilities <- map(hybas_ids,~{
 yprobas <- probabilities %>%
   dplyr::filter(YYYY == fyear) %>%
   mutate(HYBAS_ID = as.factor(HYBAS_ID))
-
 # ==============================================================================
 # 6) SAVE NUMERIC OUTPUTS
 # ==============================================================================
 file_rds <- file.path(
   file.path(PATH_OUTPUT,"exports"),
-  paste0(PREDICTOR_VARS, "_seasonal_forecast_stat_", FINAL_FUSER, "_", timestamp, ".rds")
+  paste0(PREDICTOR_VARS, "_seasonal_forecast_ml_", FINAL_FUSER, "_", timestamp, ".rds")
 )
 
 saveRDS(ml_results, file_rds)
@@ -183,17 +186,35 @@ message("Numeric outputs saved.")
 # ==============================================================================
 # 7) BUILD MAPS
 # ==============================================================================
-
 message("Building probability map ...")
+layers <- list(
+  list(layer = geom_sf(data=sf_rivers, color ="blue",size=0.8),
+       position = "above"),
+  list(layer = geom_sf(data=sf_masque, fill=NA),
+       position = "above"),
+  list(layer = geom_sf(data=sf_outlets, color="red",size=0.9),
+       position = "above"),
+  list(layer = geom_sf(data=country,fill=NA, color ="gray"), position = "above")#,
+  #if(!is.null(a_was)) list(layer = geom_sf(data=a_was,fill=NA, color ="black"), position = "below")
+)
+
+
+
+res <- plot_entropy_map_facet(
+  df_entropy = probabilities,
+  sf_bassins = sf_basins,
+  period_start = 20200101,
+  period_end   = 20260101,
+  facet_by = "year",
+  agg = "mean"   # utile si plusieurs lignes par bassin-année
+)
+entropy_plot <- res$plot+
+  geom_sf(data=country, fill=NA)
+
 proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
-                                            layers = list(
-                                              list(layer = geom_sf(data=sf_rivers, color ="blue"),
-                                                   position = "above"),
-                                              list(layer = geom_sf(data=country,fill=NA, color ="black"),
-                                                   position = "below")
-                                            )) +
+                                            layers=layers) +
   annotation_north_arrow(
     location = "tr",
     which_north = "true",
@@ -220,12 +241,7 @@ class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
                                             type = "class",
-                                            layers = list(
-                                              list(layer = geom_sf(data=sf_rivers, color ="blue"),
-                                                   position = "above"),
-                                              list(layer = geom_sf(data=country,fill=NA, color ="black"),
-                                                   position = "below")
-                                            )) +
+                                            layers =layers) +
   theme(plot.margin = margin(0.5, 0.5, 0.5, 0.5) )+
   annotation_north_arrow(
     location = "tr",
@@ -238,7 +254,7 @@ class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
   )+ annotation_scale(
     location = "br",
     width_hint = 0.3
-  )
+   )
 
 print(class_plot)
 
@@ -265,4 +281,13 @@ ggsave(filename = filename_class,
        bg = "white")
 
 
+
+filename_entropy <- paste0(COUNTRY_CODE, "_", PREDICTOR_VARS,"_",fyear,"_",paste0(tolower(APPROACH)),"_entropy_", FINAL_FUSER, "_", timestamp, ".png")
+ggsave(filename = filename_entropy,
+       plot = entropy_plot,
+       path = file.path(PATH_OUTPUT,"figures"),
+       width = 9.5,
+       height = 6.5,
+       dpi = 600,
+       bg = "white")
 message("Done. Outputs saved to: ", normalizePath(PATH_OUTPUT, winslash = "/"))

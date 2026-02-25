@@ -3,19 +3,23 @@
 # Clean, documented, and beginner-friendly script
 ################################################################################
 # ---- Dependencies ----------------------------------------------------------
-rm(list = ls())
+
 # ==== PARAMETERS (participants only edit this block) ==========================
 PATH_ML_INPUTS <- "outputs/BFA_SST_seasonal_forecast_ml_xgb_20251023_011940.rds"
 PATH_STAT_INPUTS <- "outputs/BFA_SST_seasonal_forecast_ml_xgb_20251023_011940.rds"
 COUNTRY_CODE <- "CIV" # "BEN" "GMB" "GHA" "GIN" "CIV" "LBR" "MLI" "MRT" "NER" "NGA" "GNB" "SEN" "SLE" "TGO" "BFA" "TCD" "CPV"
 PATH_COUNTRIES   <- "static/was_contries.shp"   # shapefile with GMI_CNTRY field
 PATH_SUBBASINS   <- "static/subbassins.shp"
+PATH_RIVERS <- "static/was_rivers.shp"
+PATH_MASQUE <- "static/was_southern_subbasins_lev6.shp"
+PATH_WAS <- "D:/CCR_AOS/DATA/SIG/cilss/SIG/Afric_Ouest/afriqouest.shp"
+PATH_OUTLETS <- "static/outlets.shp"
 PREDICTOR_VARS <-"SST"
 PATH_OUTPUT <- "outputs"
 SHP_OUTPUT <- "SHP"
 FINAL_FUSER <- "rf"
 update_github <- TRUE
-fyear <- 2025
+fyear <- 20260101
 source("scripts/load_requirement.R")
 source("scripts/fused_data_processing.R")
 
@@ -26,12 +30,21 @@ yprobas <- probabilities %>%
 
 # ---- 5) Probability map -------------------------------------------------------
 message("Building probability map ...")
-contry_plot <-  geom_sf(data = country, fill = NA,
-                        color = "red", size = 0.4)
-proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
-                                            data = yprobas,basin_col = "HYBAS_ID" )+
-  contry_plot
+layers <- list(
+  list(layer = geom_sf(data=sf_rivers, color ="blue"),
+       position = "above"),
+  list(layer = geom_sf(data=sf_masque, fill=NA),
+       position = "above"),
+  list(layer = geom_sf(data=sf_outlets, color="red",size=1.2),
+       position = "above"),
+  list(layer = geom_sf(data=country,fill=NA, color ="red"), position = "below"),
+  if(!is.null(a_was)) list(layer = geom_sf(data=a_was,fill=NA, color ="black"), position = "below")
+)
 
+
+proba_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
+                                            data = yprobas,basin_col = "HYBAS_ID",
+                                            layers=layers)
 sf_probas <- sf_basins %>%
   #dplyr::select(HYBAS_ID,NEXT_DOWN,GMI_CNTRY) %>%
   dplyr::inner_join(yprobas, by = "HYBAS_ID")
@@ -86,8 +99,8 @@ message("Building class map ...")
 class_plot <- WASS2SHydroR::wass2s_plot_map(sf_basins =sf_basins,
                                             data = yprobas,
                                             basin_col = "HYBAS_ID",
-                                            type = "class" )+
-  contry_plot+
+                                            type = "class",
+                                            layers=layers)+
   geom_sf_text(data =sf_basins,
                aes(label = HYBAS_ID), size = 2.5,
                color = "#000000" )

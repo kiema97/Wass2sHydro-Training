@@ -87,17 +87,22 @@ safeload <- function(pkgs, update_github = TRUE) {
 # Execute once to ensure your working session has everything loaded
 safeload(required_pkgs)
 source("scripts/reduce_data_by_products_eof.R")
+source("scripts/utils_plots.R")
+safe_read_sf<- function(path) {
+  if (is.null(path)) return(NULL)
+  if (!file.exists(path)) stop("File not found: ", path, call. = FALSE)
+  sf::st_read(path, quiet = TRUE) %>%
+    sf::st_make_valid()
+}
 #------------------- 1) Clip subbasins by country polygon-----------------------------------
 
 # Read shapefiles
-a_countries <- sf::st_read(PATH_COUNTRIES, quiet = TRUE) %>%
-  sf::st_make_valid()
-a_subs      <- sf::st_read(PATH_SUBBASINS, quiet = TRUE) %>%
-  sf::st_make_valid()
-
-a_rivers      <- sf::st_read(PATH_RIVERS, quiet = TRUE) %>%
-  sf::st_make_valid()
-
+a_countries <- safe_read_sf(PATH_COUNTRIES)
+a_subs      <- safe_read_sf(PATH_SUBBASINS)
+a_rivers      <-safe_read_sf(PATH_RIVERS)
+a_masque <- safe_read_sf(PATH_MASQUE)
+a_outlets <- safe_read_sf(PATH_OUTLETS)
+a_was <- safe_read_sf(PATH_WAS)
 # Ensure same CRS
 if (sf::st_crs(a_countries) != sf::st_crs(a_subs)) {
   a_subs <- sf::st_transform(a_subs, sf::st_crs(a_countries))
@@ -105,6 +110,15 @@ if (sf::st_crs(a_countries) != sf::st_crs(a_subs)) {
 
 if (sf::st_crs(a_rivers) != sf::st_crs(a_subs)){
   a_rivers <- sf::st_transform(a_rivers, sf::st_crs(a_subs))
+}
+
+if (sf::st_crs(a_rivers) != sf::st_crs(a_masque)){
+  a_masque <- sf::st_transform(a_masque, sf::st_crs(a_rivers))
+}
+
+
+if (sf::st_crs(a_rivers) != sf::st_crs(a_outlets)){
+  a_outlets <- sf::st_transform(a_outlets, sf::st_crs(a_rivers))
 }
 
 # Filter country
@@ -130,6 +144,15 @@ subs_union <- a_subs %>%
 
 sf_rivers_ <- sf::st_intersection(a_rivers, country)
 sf_rivers <- sf::st_intersection(sf_rivers_, subs_union)
+
+sf_masque <- sf::st_intersection(a_masque,country)
+sf_outlets_ <- sf::st_intersection(a_outlets,country)
+sf_outlets <- sf::st_intersection(sf_outlets_,subs_union)
+if(!is.null(sf_masque)){
+  sf_basins <- sf::st_intersection(sf_basins,sf_masque)
+  sf_rivers <- sf::st_intersection(sf_rivers,sf_masque)
+
+}
 merge_prcp_sst_lists <- function(
     prcp,
     sst,

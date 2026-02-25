@@ -14,8 +14,15 @@ if (sf::st_crs(a_countries) != sf::st_crs(a_subs)) {
 }
 
 # Filter country
-country <- a_countries %>% filter(.data$GMI_CNTRY == COUNTRY_CODE)
-if (nrow(country) == 0) stop("No country with GMI_CNTRY == ", COUNTRY_CODE)
+# country <- a_countries %>% filter(.data$GMI_CNTRY == COUNTRY_CODE)
+# if (nrow(country) == 0) stop("No country with GMI_CNTRY == ", COUNTRY_CODE)
+#
+
+country <- a_countries
+if(!is.null(COUNTRY_CODE)){
+  country <- country %>% filter(.data$GMI_CNTRY == COUNTRY_CODE)
+  if (nrow(country) == 0) stop("No country with GMI_CNTRY == ", COUNTRY_CODE)
+}
 
 # Intersections: subbasins partially or fully covered by the country polygon
 inter_idx <- sf::st_intersects(a_subs, country, sparse = TRUE)
@@ -24,6 +31,47 @@ subs_sel <- a_subs[sel, ]
 
 sf_basins <- sf::st_intersection(a_subs, country)%>%
   mutate(HYBAS_ID = as.factor(HYBAS_ID))
+
+
+
+
+# Read shapefiles
+a_rivers      <-safe_read_sf(PATH_RIVERS)
+a_masque <- safe_read_sf(PATH_MASQUE)
+a_outlets <- safe_read_sf(PATH_OUTLETS)
+a_was <- safe_read_sf(PATH_WAS)
+# Ensure same CRS
+if (sf::st_crs(a_rivers) != sf::st_crs(a_subs)){
+  a_rivers <- sf::st_transform(a_rivers, sf::st_crs(a_subs))
+}
+
+if (sf::st_crs(a_rivers) != sf::st_crs(a_masque)){
+  a_masque <- sf::st_transform(a_masque, sf::st_crs(a_rivers))
+}
+
+
+if (sf::st_crs(a_rivers) != sf::st_crs(a_outlets)){
+  a_outlets <- sf::st_transform(a_outlets, sf::st_crs(a_rivers))
+}
+
+sf_basins <- sf::st_intersection(a_subs, country)%>%
+  mutate(HYBAS_ID = as.factor(HYBAS_ID))
+
+subs_union <- a_subs %>%
+  st_make_valid() %>%
+  st_union() %>%
+  st_as_sf()
+
+sf_rivers_ <- sf::st_intersection(a_rivers, country)
+sf_rivers <- sf::st_intersection(sf_rivers_, subs_union)
+
+sf_masque <- sf::st_intersection(a_masque,country)
+sf_outlets_ <- sf::st_intersection(a_outlets,country)
+sf_outlets <- sf::st_intersection(sf_outlets_,subs_union)
+if(!is.null(sf_masque)){
+  sf_basins <- sf::st_intersection(sf_basins,sf_masque)
+  sf_rivers <- sf::st_intersection(sf_rivers,sf_masque)
+}
 
 #------------------- 2)Forecast data processing -----------------------------------
 
